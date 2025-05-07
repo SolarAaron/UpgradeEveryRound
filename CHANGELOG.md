@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.2.1] - 2025-5-6
+### Changed
+- Moved code around a little bit
+
 ## [1.2.0] - 2025-5-6
 ### Added
 - Host config now syncs to other players in server

@@ -23,7 +23,7 @@ public class Plugin : BaseUnityPlugin
 {
     public const string modGUID = "dev.redfops.repo.upgradeeveryround";
     public const string modName = "Upgrade Every Round";
-    public const string modVersion = "1.2.0";
+    public const string modVersion = "1.2.1";
 
     private static ConfigEntry<int> upgradesPerRound;
     private static ConfigEntry<bool> limitedChoices;
@@ -172,46 +172,5 @@ public class Plugin : BaseUnityPlugin
     public static int NumUpgradesUsed(string _steamID)
     {
         return StatsManager.instance.dictionaryOfDictionaries["playerUpgradesUsed"][_steamID];
-    }
-}
-
-[HarmonyPatch(typeof(StatsUI), "Update")]
-public static class StatsUIPatch
-{
-    static void Prefix(ref float ___showStatsTimer)
-    {
-        if (UpgradeMenu.isOpen) ___showStatsTimer = 5f;
-    }
-}
-//Our custom save data handling
-[HarmonyPatch(typeof(StatsManager))]
-[HarmonyPatch("Start")]
-public static class StatsManagerPatch
-{
-    static void Prefix(StatsManager __instance)
-    {
-        __instance.dictionaryOfDictionaries.Add("playerUpgradesUsed",[]); //Keeps track of how many upgrades each player has used so far
-        __instance.dictionaryOfDictionaries.Add("UERDataSync", new Dictionary<string, int>() { {"HostConfig", Plugin.configData} }); //Using this to sync any other necessary data across clients, currently config.
-    }
-}
-
-//So it turns out that things break sometimes, make sure we reset this value incase they escape the menu through other means
-[HarmonyPatch(typeof(RunManager))]
-[HarmonyPatch(nameof(RunManager.ChangeLevel))]
-public static class RunManagerChangeLevelPatch
-{
-    static void Prefix()
-    {
-        UpgradeMenu.isOpen = false;
-    }
-}
-
-[HarmonyPatch(typeof(RunManager))]
-[HarmonyPatch(nameof(RunManager.LeaveToMainMenu))]
-public static class RunManagerMainMenuPatch
-{
-    static void Prefix()
-    {
-        UpgradeMenu.isOpen = false;
     }
 }
