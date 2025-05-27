@@ -9,7 +9,7 @@ namespace UpgradeEveryRound
     [HarmonyPatch("SpawnRPC")]
     public static class PlayerSpawnPatch
     {
-        static void Prefix(PhotonView ___photonView)
+        static void Postfix(PhotonView ___photonView)
         {
             Level[] bannedLevels = [RunManager.instance.levelMainMenu, RunManager.instance.levelLobbyMenu, RunManager.instance.levelTutorial];
             if (bannedLevels.Contains(RunManager.instance.levelCurrent)) return;

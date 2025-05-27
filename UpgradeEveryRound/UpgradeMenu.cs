@@ -1,8 +1,6 @@
 ﻿using MenuLib;
 using MenuLib.MonoBehaviors;
-using System;
 using System.Collections.Generic;
-using System.Text;
 using UnityEngine;
 using Random = UnityEngine.Random;
 

@@ -1,20 +1,10 @@
 ﻿using BepInEx;
 using BepInEx.Logging;
 using HarmonyLib;
-using HarmonyLib.Tools;
 using MenuLib.MonoBehaviors;
-using MenuLib;
-using UnityEngine;
 using Photon.Pun;
-using System.Collections.Generic;
-using Steamworks;
 using BepInEx.Configuration;
-using System.Linq;
 using System;
-using static UnityEngine.Rendering.DebugUI;
-using MonoMod.RuntimeDetour;
-using System.Reflection;
-using System.Reflection.Emit;
 
 namespace UpgradeEveryRound;
 
@@ -23,7 +13,7 @@ public class Plugin : BaseUnityPlugin
 {
     public const string modGUID = "dev.redfops.repo.upgradeeveryround";
     public const string modName = "Upgrade Every Round";
-    public const string modVersion = "1.2.1";
+    public const string modVersion = "1.2.2";
 
     private static ConfigEntry<int> upgradesPerRound;
     private static ConfigEntry<bool> limitedChoices;
