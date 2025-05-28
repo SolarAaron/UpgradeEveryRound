@@ -14,7 +14,7 @@ public class Plugin : BaseUnityPlugin
 {
     public const string modGUID = "dev.redfops.repo.upgradeeveryround";
     public const string modName = "Upgrade Every Round";
-    public const string modVersion = "1.2.3";
+    public const string modVersion = "1.2.4";
 
     private static ConfigEntry<int> upgradesPerRound;
     private static ConfigEntry<bool> limitedChoices;
@@ -72,6 +72,7 @@ public class Plugin : BaseUnityPlugin
         harmony.PatchAll(typeof(RunManagerChangeLevelPatch));
         harmony.PatchAll(typeof(RunManagerMainMenuPatch));
         harmony.PatchAll(typeof(StatsManagerStartPatch));
+        harmony.PatchAll(typeof(StatsManagerSavePatch));
         harmony.PatchAll(typeof(StatsManagerLoadPatch));
         harmony.PatchAll(typeof(StatsUIPatch));
         harmony.PatchAll(typeof(UpgradeMapPlayerCountPatch));

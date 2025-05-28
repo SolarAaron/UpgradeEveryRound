@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.2.4] - 2025-5-28
+### Fixed
+- Upgrade menu is now always closeable by pressing ESC in case of plugin malfunction
+- Bug causing plugin config to not properly initialize on new saves.
+- Hopefully make menu popping up more reliable
+
 ## [1.2.3] - 2025-5-27
 ### Fixed
 - Bug causing only host to recieve upgrades

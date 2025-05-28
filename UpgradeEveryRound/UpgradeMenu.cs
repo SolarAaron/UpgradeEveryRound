@@ -19,7 +19,8 @@ namespace UpgradeEveryRound
             REPOPopupPage repoPopupPage = MenuAPI.CreateREPOPopupPage("Choose an upgrade", REPOPopupPage.PresetSide.Right, shouldCachePage: false, pageDimmerVisibility: true, spacing: 1.5f);
 
             repoPopupPage.menuPage.onPageEnd.AddListener(() => { isOpen = false; }); //They really shouldn't be able to close it, but just in case we want to make sure their menus work
-            repoPopupPage.onEscapePressed = new REPOPopupPage.ShouldCloseMenuDelegate(() => false);
+            // Nevermind, let them close it in case the plugin breaks
+            //repoPopupPage.onEscapePressed = new REPOPopupPage.ShouldCloseMenuDelegate(() => false);
 
             int numChoices = Plugin.LimitedChoices ? Plugin.NumChoices : 8;
             List<int> choices = [0, 1, 2, 3, 4, 5, 6, 7];

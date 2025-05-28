@@ -25,11 +25,31 @@ namespace UpgradeEveryRound
     }
 
     [HarmonyPatch(typeof(StatsManager))]
+    [HarmonyPatch("SaveGame")]
+    public static class StatsManagerSavePatch
+    {
+
+        static void Postfix(ref StatsManager __instance)
+        {
+            if (!SemiFunc.IsMasterClientOrSingleplayer())
+            {
+                return;
+            }
+            __instance.dictionaryOfDictionaries["UERDataSync"]["HostConfig"] = Plugin.configData;
+        }
+
+    }
+
+    [HarmonyPatch(typeof(StatsManager))]
     [HarmonyPatch("LoadGame")]
     public static class StatsManagerLoadPatch
     {
         static void Postfix(ref StatsManager __instance)
         {
+            if (!SemiFunc.IsMasterClientOrSingleplayer())
+            {
+                return;
+            }
             __instance.dictionaryOfDictionaries["UERDataSync"]["HostConfig"] = Plugin.configData;
         }
 
