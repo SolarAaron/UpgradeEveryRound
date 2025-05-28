@@ -5,6 +5,7 @@ using MenuLib.MonoBehaviors;
 using Photon.Pun;
 using BepInEx.Configuration;
 using System;
+using System.Collections.Generic;
 
 namespace UpgradeEveryRound;
 
@@ -13,7 +14,7 @@ public class Plugin : BaseUnityPlugin
 {
     public const string modGUID = "dev.redfops.repo.upgradeeveryround";
     public const string modName = "Upgrade Every Round";
-    public const string modVersion = "1.2.2";
+    public const string modVersion = "1.2.3";
 
     private static ConfigEntry<int> upgradesPerRound;
     private static ConfigEntry<bool> limitedChoices;
@@ -67,10 +68,11 @@ public class Plugin : BaseUnityPlugin
 
         UpdateConfigData();
 
-        harmony.PatchAll(typeof(PlayerSpawnPatch));
+        harmony.PatchAll(typeof(LoadingLevelAnimationCompletedPatch));
         harmony.PatchAll(typeof(RunManagerChangeLevelPatch));
         harmony.PatchAll(typeof(RunManagerMainMenuPatch));
-        harmony.PatchAll(typeof(StatsManagerPatch));
+        harmony.PatchAll(typeof(StatsManagerStartPatch));
+        harmony.PatchAll(typeof(StatsManagerLoadPatch));
         harmony.PatchAll(typeof(StatsUIPatch));
         harmony.PatchAll(typeof(UpgradeMapPlayerCountPatch));
         harmony.PatchAll(typeof(UpgradePlayerEnergyPatch));
@@ -116,17 +118,17 @@ public class Plugin : BaseUnityPlugin
     }
 
     //Get config from either synced data or directly depending on whether we're a host, client, or in singleplayer
-    public static int UpgradesPerRound => SemiFunc.IsMasterClientOrSingleplayer() ? upgradesPerRound.Value : StatsManager.instance.dictionaryOfDictionaries["UERDataSync"]["HostConfig"] & 0x7;
-    public static bool LimitedChoices => SemiFunc.IsMasterClientOrSingleplayer() ? limitedChoices.Value : (StatsManager.instance.dictionaryOfDictionaries["UERDataSync"]["HostConfig"] & 0x40) == 1;
-    public static int NumChoices => SemiFunc.IsMasterClientOrSingleplayer() ? numChoices.Value : ((StatsManager.instance.dictionaryOfDictionaries["UERDataSync"]["HostConfig"] & 0x38) >> 3) + 1;
-    public static bool AllowMapCount => SemiFunc.IsMasterClientOrSingleplayer() ? allowMapCount.Value : (StatsManager.instance.dictionaryOfDictionaries["UERDataSync"]["HostConfig"] & 0x80) == 1;
-    public static bool AllowEnergy => SemiFunc.IsMasterClientOrSingleplayer() ? allowEnergy.Value : (StatsManager.instance.dictionaryOfDictionaries["UERDataSync"]["HostConfig"] & 0x100) == 1;
-    public static bool AllowExtraJump => SemiFunc.IsMasterClientOrSingleplayer() ? allowExtraJump.Value : (StatsManager.instance.dictionaryOfDictionaries["UERDataSync"]["HostConfig"] & 0x200) == 1;
-    public static bool AllowRange => SemiFunc.IsMasterClientOrSingleplayer() ? allowRange.Value : (StatsManager.instance.dictionaryOfDictionaries["UERDataSync"]["HostConfig"] & 0x400) == 1;
-    public static bool AllowStrength => SemiFunc.IsMasterClientOrSingleplayer() ? allowStrength.Value : (StatsManager.instance.dictionaryOfDictionaries["UERDataSync"]["HostConfig"] & 0x800) == 1;
-    public static bool AllowHealth => SemiFunc.IsMasterClientOrSingleplayer() ? allowHealth.Value : (StatsManager.instance.dictionaryOfDictionaries["UERDataSync"]["HostConfig"] & 0x1000) == 1;
-    public static bool AllowSpeed => SemiFunc.IsMasterClientOrSingleplayer() ? allowSpeed.Value : (StatsManager.instance.dictionaryOfDictionaries["UERDataSync"]["HostConfig"] & 0x2000) == 1;
-    public static bool AllowTumbleLaunch => SemiFunc.IsMasterClientOrSingleplayer() ? allowTumbleLaunch.Value : (StatsManager.instance.dictionaryOfDictionaries["UERDataSync"]["HostConfig"] & 0x4000) == 1;
+    public static int UpgradesPerRound => StatsManager.instance.dictionaryOfDictionaries["UERDataSync"]["HostConfig"] & 0x7;
+    public static bool LimitedChoices => (StatsManager.instance.dictionaryOfDictionaries["UERDataSync"]["HostConfig"] & 0x40) == 0x40;
+    public static int NumChoices => ((StatsManager.instance.dictionaryOfDictionaries["UERDataSync"]["HostConfig"] & 0x38) >> 3) + 1;
+    public static bool AllowMapCount => (StatsManager.instance.dictionaryOfDictionaries["UERDataSync"]["HostConfig"] & 0x80) == 0x80;
+    public static bool AllowEnergy => (StatsManager.instance.dictionaryOfDictionaries["UERDataSync"]["HostConfig"] & 0x100) == 0x100;
+    public static bool AllowExtraJump => (StatsManager.instance.dictionaryOfDictionaries["UERDataSync"]["HostConfig"] & 0x200) == 0x200;
+    public static bool AllowRange => (StatsManager.instance.dictionaryOfDictionaries["UERDataSync"]["HostConfig"] & 0x400) == 0x400;
+    public static bool AllowStrength => (StatsManager.instance.dictionaryOfDictionaries["UERDataSync"]["HostConfig"] & 0x800) == 0x800;
+    public static bool AllowHealth => (StatsManager.instance.dictionaryOfDictionaries["UERDataSync"]["HostConfig"] & 0x1000) == 0x1000;
+    public static bool AllowSpeed => (StatsManager.instance.dictionaryOfDictionaries["UERDataSync"]["HostConfig"] & 0x2000) == 0x2000;
+    public static bool AllowTumbleLaunch => (StatsManager.instance.dictionaryOfDictionaries["UERDataSync"]["HostConfig"] & 0x4000) == 0x4000;
 
 
     //Helper function containing a good chunk of the repeated code from the buttons

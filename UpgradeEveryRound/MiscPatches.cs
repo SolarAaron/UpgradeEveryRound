@@ -15,17 +15,27 @@ namespace UpgradeEveryRound
     //Our custom save data handling
     [HarmonyPatch(typeof(StatsManager))]
     [HarmonyPatch("Start")]
-    public static class StatsManagerPatch
+    public static class StatsManagerStartPatch
     {
-        static void Prefix(StatsManager __instance)
+        static void Prefix(ref StatsManager __instance)
         {
             __instance.dictionaryOfDictionaries.Add("playerUpgradesUsed", []); //Keeps track of how many upgrades each player has used so far
-            __instance.dictionaryOfDictionaries.Add("UERDataSync", new Dictionary<string, int>() { { "HostConfig", Plugin.configData } }); //Using this to sync any other necessary data across clients, currently config.
+            __instance.dictionaryOfDictionaries.Add("UERDataSync", new Dictionary<string, int>() { ["HostConfig"] = Plugin.configData }); //Using this to sync any other necessary data across clients, currently config.
         }
     }
 
-    //So it turns out that things break sometimes, make sure we reset this value incase they escape the menu through other means
-    [HarmonyPatch(typeof(RunManager))]
+    [HarmonyPatch(typeof(StatsManager))]
+    [HarmonyPatch("LoadGame")]
+    public static class StatsManagerLoadPatch
+    {
+        static void Postfix(ref StatsManager __instance)
+        {
+            __instance.dictionaryOfDictionaries["UERDataSync"]["HostConfig"] = Plugin.configData;
+        }
+
+    }
+            //So it turns out that things break sometimes, make sure we reset this value incase they escape the menu through other means
+            [HarmonyPatch(typeof(RunManager))]
     [HarmonyPatch(nameof(RunManager.ChangeLevel))]
     public static class RunManagerChangeLevelPatch
     {

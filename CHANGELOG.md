@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.2.3] - 2025-5-27
+### Fixed
+- Bug causing only host to recieve upgrades
+
+## [1.2.2] - 2025-5-26
+### Fixed
+- Bug causing players to spawn in incorrect positions
+
 ## [1.2.1] - 2025-5-6
 ### Changed
 - Moved code around a little bit

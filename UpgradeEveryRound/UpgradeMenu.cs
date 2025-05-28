@@ -23,7 +23,9 @@ namespace UpgradeEveryRound
 
             int numChoices = Plugin.LimitedChoices ? Plugin.NumChoices : 8;
             List<int> choices = [0, 1, 2, 3, 4, 5, 6, 7];
+
             bool[] allowed = { Plugin.AllowEnergy, Plugin.AllowExtraJump, Plugin.AllowRange, Plugin.AllowStrength, Plugin.AllowHealth, Plugin.AllowSpeed, Plugin.AllowTumbleLaunch, Plugin.AllowMapCount };
+
             int removed = 0;
             for (int i = 0; i < choices.Count; i++)
             {

@@ -6,11 +6,13 @@ using System.Linq;
 namespace UpgradeEveryRound
 {
     [HarmonyPatch(typeof(PlayerAvatar))]
-    [HarmonyPatch("SpawnRPC")]
-    public static class PlayerSpawnPatch
+    [HarmonyPatch("LoadingLevelAnimationCompletedRPC")]
+    public static class LoadingLevelAnimationCompletedPatch
     {
         static void Postfix(PhotonView ___photonView)
         {
+            if((!___photonView.IsMine) && SemiFunc.IsMultiplayer()) { return; }
+
             Level[] bannedLevels = [RunManager.instance.levelMainMenu, RunManager.instance.levelLobbyMenu, RunManager.instance.levelTutorial];
             if (bannedLevels.Contains(RunManager.instance.levelCurrent)) return;
 
