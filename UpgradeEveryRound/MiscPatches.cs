@@ -19,6 +19,7 @@ namespace UpgradeEveryRound
     {
         static void Prefix(ref StatsManager __instance)
         {
+            Plugin.Instance.BuildExtraUpgradeList();
             __instance.dictionaryOfDictionaries.Add("playerUpgradesUsed", []); //Keeps track of how many upgrades each player has used so far
         }
     }

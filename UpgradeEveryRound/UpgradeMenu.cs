@@ -3,6 +3,7 @@ using MenuLib.MonoBehaviors;
 using Steamworks;
 using System.Collections.Generic;
 using System.Linq;
+using REPOLib.Modules;
 using UnityEngine;
 using Random = UnityEngine.Random;
 
@@ -50,8 +51,14 @@ namespace UpgradeEveryRound
             int numChoices = Plugin.LimitedChoices ? Plugin.NumChoices : 8;
             List<int> choices = [0, 1, 2, 3, 4, 5, 6, 7];
 
-            bool[] allowed = [Plugin.AllowEnergy, Plugin.AllowExtraJump, Plugin.AllowRange, Plugin.AllowStrength, Plugin.AllowHealth, Plugin.AllowSpeed, Plugin.AllowTumbleLaunch, Plugin.AllowMapCount];
+            List<bool> allowed = [Plugin.AllowEnergy, Plugin.AllowExtraJump, Plugin.AllowRange, Plugin.AllowStrength, Plugin.AllowHealth, Plugin.AllowSpeed, Plugin.AllowTumbleLaunch, Plugin.AllowMapCount];
 
+            foreach (var customAllow in Plugin.AllowExtras) {
+                var baseIndex = customAllow.Key;
+                choices.Add(choices.Count);
+                allowed.Add(Plugin.AllowCustomUpgradeByIndex(baseIndex));
+            }
+            
             int removed = 0;
             for (int i = 0; i < choices.Count; i++)
             {
@@ -67,12 +74,19 @@ namespace UpgradeEveryRound
             bool choseUpgrade = false;
 
             //Add limited buttons randomly or all in order depending on config
+            Vector2[] positions = [
+                                      new Vector2(390f, 18f), new Vector2(530f, 18f),
+                                      new Vector2(390f, 60f), new Vector2(530f, 60f),
+                                      new Vector2(390f, 102f), new Vector2(530f, 102f),
+                                      new Vector2(390f, 144f), new Vector2(530f, 144f)
+                                  ];
+            
             for (int i = 0; i < numChoices; i++)
             {
-                int choiceIndex = Plugin.LimitedChoices ? Random.Range(0, choices.Count) : 0; //If not limited choices then we don't need to use random
+                int choiceIndex = (Plugin.LimitedChoices || choices.Count > 8) ? Random.Range(0, choices.Count) : 0; //If not limited choices then we don't need to use random
                 int choice = choices[choiceIndex];
                 choices.RemoveAt(choiceIndex);
-
+                var positionIdx = i;
 
                 switch (choice)
                 {
@@ -84,7 +98,7 @@ namespace UpgradeEveryRound
                             PunManager.instance.UpgradePlayerEnergy(_steamID);
                             Plugin.ApplyUpgrade(_steamID, repoPopupPage);
                             return;
-                        }, parent, new Vector2(390f, 18f)));
+                        }, parent, positions[positionIdx]));
                         break;
 
                     case 1:
@@ -95,7 +109,7 @@ namespace UpgradeEveryRound
                             PunManager.instance.UpgradePlayerExtraJump(_steamID);
                             Plugin.ApplyUpgrade(_steamID, repoPopupPage);
                             return;
-                        }, parent, new Vector2(530f, 18f)));
+                        }, parent, positions[positionIdx]));
                         break;
 
                     case 2:
@@ -106,7 +120,7 @@ namespace UpgradeEveryRound
                             PunManager.instance.UpgradePlayerGrabRange(_steamID);
                             Plugin.ApplyUpgrade(_steamID, repoPopupPage);
                             return;
-                        }, parent, new Vector2(390f, 60f)));
+                        }, parent, positions[positionIdx]));
                         break;
 
                     case 3:
@@ -117,7 +131,7 @@ namespace UpgradeEveryRound
                             PunManager.instance.UpgradePlayerGrabStrength(_steamID);
                             Plugin.ApplyUpgrade(_steamID, repoPopupPage);
                             return;
-                        }, parent, new Vector2(530f, 60f)));
+                        }, parent, positions[positionIdx]));
                         break;
 
                     case 4:
@@ -128,7 +142,7 @@ namespace UpgradeEveryRound
                             PunManager.instance.UpgradePlayerHealth(_steamID);
                             Plugin.ApplyUpgrade(_steamID, repoPopupPage);
                             return;
-                        }, parent, new Vector2(390f, 102f)));
+                        }, parent, positions[positionIdx]));
                         break;
 
                     case 5:
@@ -139,7 +153,7 @@ namespace UpgradeEveryRound
                             PunManager.instance.UpgradePlayerSprintSpeed(_steamID);
                             Plugin.ApplyUpgrade(_steamID, repoPopupPage);
                             return;
-                        }, parent, new Vector2(530f, 102f)));
+                        }, parent, positions[positionIdx]));
                         break;
 
                     case 6:
@@ -150,7 +164,7 @@ namespace UpgradeEveryRound
                             PunManager.instance.UpgradePlayerTumbleLaunch(_steamID);
                             Plugin.ApplyUpgrade(_steamID, repoPopupPage);
                             return;
-                        }, parent, new Vector2(390f, 144f)));
+                        }, parent, positions[positionIdx]));
                         break;
 
                     case 7:
@@ -161,7 +175,18 @@ namespace UpgradeEveryRound
                             PunManager.instance.UpgradeMapPlayerCount(_steamID);
                             Plugin.ApplyUpgrade(_steamID, repoPopupPage);
                             return;
-                        }, parent, new Vector2(530f, 144f)));
+                        }, parent, positions[positionIdx]));
+                        break;
+
+                    default:
+                        repoPopupPage.AddElement(parent => MenuAPI.CreateREPOButton(Plugin.ExtraLabels[choice - 8], () =>
+                        {
+                            if (choseUpgrade) return; //Sanity check to prevent spamming the buttons.
+                            choseUpgrade = true;
+                            Upgrades.GetUpgrade(Plugin.ExtraLabels[choice - 8].Replace(" ", ""))?.AddLevel(_steamID); // REPOLib handles syncing through PUN
+                            Plugin.ApplyUpgrade(_steamID, repoPopupPage);
+                            return;
+                        }, parent, positions[positionIdx]));
                         break;
                 }
             }
