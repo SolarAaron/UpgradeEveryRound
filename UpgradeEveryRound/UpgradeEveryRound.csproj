@@ -34,6 +34,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Zehs.REPOLib" Version="2.*" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Reference Include="MenuLib">
       <HintPath>C:\Users\cadyn\AppData\Roaming\r2modmanPlus-local\REPO\profiles\stimky\BepInEx\plugins\nickklmao-MenuLib\MenuLib.dll</HintPath>
     </Reference>

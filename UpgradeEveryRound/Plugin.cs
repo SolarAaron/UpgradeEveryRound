@@ -6,31 +6,52 @@ using Photon.Pun;
 using BepInEx.Configuration;
 using System;
 using System.Collections.Generic;
+using REPOLib;
+using REPOLib.Modules;
+using ExitGames.Client.Photon;
+using Photon.Realtime;
 
 namespace UpgradeEveryRound;
 
 [BepInPlugin(modGUID, modName, modVersion), BepInDependency("nickklmao.menulib", "2.1.3")]
+[BepInDependency(REPOLib.MyPluginInfo.PLUGIN_GUID, BepInDependency.DependencyFlags.HardDependency)]
 public class Plugin : BaseUnityPlugin
 {
     public const string modGUID = "dev.redfops.repo.upgradeeveryround";
     public const string modName = "Upgrade Every Round";
-    public const string modVersion = "1.2.4";
+    public const string modVersion = "1.3.0";
 
-    private static ConfigEntry<int> upgradesPerRound;
-    private static ConfigEntry<bool> limitedChoices;
-    private static ConfigEntry<int> numChoices;
+    public static ConfigEntry<int> upgradesPerRound;
+    public static ConfigEntry<bool> limitedChoices;
+    public static ConfigEntry<int> numChoices;
 
-    private static ConfigEntry<bool> allowMapCount;
-    private static ConfigEntry<bool> allowEnergy;
-    private static ConfigEntry<bool> allowExtraJump;
-    private static ConfigEntry<bool> allowRange;
-    private static ConfigEntry<bool> allowStrength;
-    private static ConfigEntry<bool> allowHealth;
-    private static ConfigEntry<bool> allowSpeed;
-    private static ConfigEntry<bool> allowTumbleLaunch;
+    public static ConfigEntry<bool> allowMapCount;
+    public static ConfigEntry<bool> allowEnergy;
+    public static ConfigEntry<bool> allowExtraJump;
+    public static ConfigEntry<bool> allowRange;
+    public static ConfigEntry<bool> allowStrength;
+    public static ConfigEntry<bool> allowHealth;
+    public static ConfigEntry<bool> allowSpeed;
+    public static ConfigEntry<bool> allowTumbleLaunch;
 
-    //Will contain all of the config data in one integer bitwise, used for syncing data with clients
-    public static int configData = 0;
+    public static NetworkData localNetworkData;
+    public static NetworkData remoteNetworkData;
+    public static NetworkData CurrentNetworkData {
+        get
+        {
+            if (!GameManager.instance || SemiFunc.IsMasterClientOrSingleplayer()) return localNetworkData;
+            if (remoteNetworkData == null)
+            {
+                Plugin.Logger.LogError("Missing remote data");
+                return localNetworkData; //Less than ideal but just return local data to prevent anything from breaking.
+            }
+            return remoteNetworkData;
+        }
+    }
+
+    public static NetworkedEvent ConfigUpdateEvent;
+
+    public static RaiseEventOptions ConfigUpdateEventOptions = new() { CachingOption = EventCaching.AddToRoomCache, Receivers = ReceiverGroup.Others};
 
     internal static new ManualLogSource Logger;
     private readonly Harmony harmony = new Harmony(modGUID);
@@ -66,14 +87,15 @@ public class Plugin : BaseUnityPlugin
         allowSpeed.SettingChanged += ConfigUpdated;
         allowTumbleLaunch.SettingChanged += ConfigUpdated;
 
-        UpdateConfigData();
+        localNetworkData = new();
 
-        harmony.PatchAll(typeof(LoadingLevelAnimationCompletedPatch));
-        harmony.PatchAll(typeof(RunManagerChangeLevelPatch));
+        ConfigUpdateEvent = new NetworkedEvent("ConfigUpdate", HandleConfigUpdateEvent);
+
+        harmony.PatchAll(typeof(SceneSwitchPatch));
+        harmony.PatchAll(typeof(OnLevelGenDonePatch));
+        harmony.PatchAll(typeof(SteamManagerPatch));
         harmony.PatchAll(typeof(RunManagerMainMenuPatch));
         harmony.PatchAll(typeof(StatsManagerStartPatch));
-        harmony.PatchAll(typeof(StatsManagerSavePatch));
-        harmony.PatchAll(typeof(StatsManagerLoadPatch));
         harmony.PatchAll(typeof(StatsUIPatch));
         harmony.PatchAll(typeof(UpgradeMapPlayerCountPatch));
         harmony.PatchAll(typeof(UpgradePlayerEnergyPatch));
@@ -84,6 +106,9 @@ public class Plugin : BaseUnityPlugin
         harmony.PatchAll(typeof(UpgradePlayerSprintSpeedPatch));
         harmony.PatchAll(typeof(UpgradePlayerTumbleLaunchPatch));
 
+        PhotonPeer.RegisterType(typeof(NetworkData), 0xF8, (x) => NetworkData.Serealize(x), NetworkData.Deserialize);
+
+        StartCoroutine(UERNetworkManager.Go());
 
         Logger.LogInfo($"Plugin {MyPluginInfo.PLUGIN_GUID} is loaded!");
     }
@@ -91,45 +116,37 @@ public class Plugin : BaseUnityPlugin
     //Allow config to be updated and synced midgame
     private void ConfigUpdated(object sender, EventArgs args)
     {
-        UpdateConfigData();
+        localNetworkData = new();
         if (!SemiFunc.IsMultiplayer() || !PhotonNetwork.IsMasterClient)
         {
             return;
         }
-        PhotonView _photonView = PunManager.instance.GetComponent<PhotonView>();
-        _photonView.RPC("UpdateStatRPC", RpcTarget.Others, "UERDataSync", "HostConfig", configData);
+        SendConfig();
     }
 
-    private void UpdateConfigData()
+    public static void SendConfig()
     {
-        configData = upgradesPerRound.Value & 0x7; ///Bits 1-3
-        configData |= ((numChoices.Value - 1) << 3) & 0x38; //Bits 4-6
-        configData |= limitedChoices.Value ? 0x40 : 0; //Bit 7
-        configData |= allowMapCount.Value ? 0x80 : 0; //Bit 8
-        configData |= allowEnergy.Value ? 0x100 : 0; //Bit 9
-        configData |= allowExtraJump.Value ? 0x200 : 0; //Bit 10
-        configData |= allowRange.Value ? 0x400 : 0; //Bit 11
-        configData |= allowStrength.Value ? 0x800 : 0; //Bit 12
-        configData |= allowHealth.Value ? 0x1000 : 0; //Bit 13
-        configData |= allowSpeed.Value ? 0x2000 : 0; //Bit 14
-        configData |= allowTumbleLaunch.Value ? 0x4000 : 0; //Bit 15
-#if DEBUG
-        Logger.LogInfo("upgradeData updated to " +  configData);
-#endif
+        ConfigUpdateEvent.RaiseEvent(localNetworkData, ConfigUpdateEventOptions, SendOptions.SendReliable);
+    }
+
+    private static void HandleConfigUpdateEvent(EventData eventData)
+    {
+        NetworkData data = (NetworkData)eventData.CustomData;
+        remoteNetworkData = data;
     }
 
     //Get config from either synced data or directly depending on whether we're a host, client, or in singleplayer
-    public static int UpgradesPerRound => StatsManager.instance.dictionaryOfDictionaries["UERDataSync"]["HostConfig"] & 0x7;
-    public static bool LimitedChoices => (StatsManager.instance.dictionaryOfDictionaries["UERDataSync"]["HostConfig"] & 0x40) == 0x40;
-    public static int NumChoices => ((StatsManager.instance.dictionaryOfDictionaries["UERDataSync"]["HostConfig"] & 0x38) >> 3) + 1;
-    public static bool AllowMapCount => (StatsManager.instance.dictionaryOfDictionaries["UERDataSync"]["HostConfig"] & 0x80) == 0x80;
-    public static bool AllowEnergy => (StatsManager.instance.dictionaryOfDictionaries["UERDataSync"]["HostConfig"] & 0x100) == 0x100;
-    public static bool AllowExtraJump => (StatsManager.instance.dictionaryOfDictionaries["UERDataSync"]["HostConfig"] & 0x200) == 0x200;
-    public static bool AllowRange => (StatsManager.instance.dictionaryOfDictionaries["UERDataSync"]["HostConfig"] & 0x400) == 0x400;
-    public static bool AllowStrength => (StatsManager.instance.dictionaryOfDictionaries["UERDataSync"]["HostConfig"] & 0x800) == 0x800;
-    public static bool AllowHealth => (StatsManager.instance.dictionaryOfDictionaries["UERDataSync"]["HostConfig"] & 0x1000) == 0x1000;
-    public static bool AllowSpeed => (StatsManager.instance.dictionaryOfDictionaries["UERDataSync"]["HostConfig"] & 0x2000) == 0x2000;
-    public static bool AllowTumbleLaunch => (StatsManager.instance.dictionaryOfDictionaries["UERDataSync"]["HostConfig"] & 0x4000) == 0x4000;
+    public static int UpgradesPerRound => CurrentNetworkData.upgradesPerRound;
+    public static bool LimitedChoices => CurrentNetworkData.limitedChoices;
+    public static int NumChoices => CurrentNetworkData.numChoices;
+    public static bool AllowMapCount => CurrentNetworkData.allowMapCount;
+    public static bool AllowEnergy => CurrentNetworkData.allowEnergy;
+    public static bool AllowExtraJump => CurrentNetworkData.allowExtraJump;
+    public static bool AllowRange => CurrentNetworkData.allowRange;
+    public static bool AllowStrength => CurrentNetworkData.allowStrength;
+    public static bool AllowHealth => CurrentNetworkData.allowHealth;
+    public static bool AllowSpeed => CurrentNetworkData.allowSpeed;
+    public static bool AllowTumbleLaunch => CurrentNetworkData.allowTumbleLaunch;
 
 
     //Helper function containing a good chunk of the repeated code from the buttons
@@ -140,13 +157,9 @@ public class Plugin : BaseUnityPlugin
         StatsUI.instance.ShowStats();
         CameraGlitch.Instance.PlayUpgrade();
 
-        int value = ++StatsManager.instance.dictionaryOfDictionaries["playerUpgradesUsed"][_steamID];
-        if (GameManager.Multiplayer())
-        {
-            //Broadcast that we used an upgrade
-            PhotonView _photonView = PunManager.instance.GetComponent<PhotonView>();
-            _photonView.RPC("UpdateStatRPC", RpcTarget.Others, "playerUpgradesUsed", _steamID, value);
-        }
+        int value = NumUpgradesUsed(_steamID) + 1;
+        UERNetworkManager.upgradesUsedLocal = value;
+        PunManager.instance.UpdateStat("playerUpgradesUsed", _steamID, value);
         
         //Close the menu
         UpgradeMenu.isOpen = false;
@@ -164,6 +177,7 @@ public class Plugin : BaseUnityPlugin
 
     public static int NumUpgradesUsed(string _steamID)
     {
+        if (!SemiFunc.IsMasterClientOrSingleplayer()) return UERNetworkManager.upgradesUsedLocal;
         return StatsManager.instance.dictionaryOfDictionaries["playerUpgradesUsed"][_steamID];
     }
 }

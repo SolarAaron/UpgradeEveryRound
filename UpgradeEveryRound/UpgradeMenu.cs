@@ -1,6 +1,8 @@
 ﻿using MenuLib;
 using MenuLib.MonoBehaviors;
+using Steamworks;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using Random = UnityEngine.Random;
 
@@ -10,6 +12,29 @@ namespace UpgradeEveryRound
     {
 
         public static bool isOpen = false;
+
+        public static void OpenMenu()
+        {
+            if (isOpen) return;
+            Level[] bannedLevels = [RunManager.instance.levelMainMenu, RunManager.instance.levelLobbyMenu, RunManager.instance.levelTutorial];
+            if (bannedLevels.Contains(RunManager.instance.levelCurrent)) return;
+
+            string _steamID = SteamClient.SteamId.Value.ToString();
+            int upgradesDeserved = RunManager.instance.levelsCompleted * Plugin.UpgradesPerRound;
+
+#if DEBUG
+            upgradesDeserved += 1;
+#endif
+            if (Plugin.NumUpgradesUsed(_steamID) >= upgradesDeserved) return;
+            //if (GameManager.Multiplayer() && !___photonView.IsMine) return;
+
+            MenuManager.instance.PageCloseAll(); //Just in case somehow other menus were opened previously.
+
+            var repoPopupPage = createMenu(_steamID);
+
+            isOpen = true;
+            repoPopupPage.OpenPage(false);
+        }
 
         public static REPOPopupPage createMenu(string _steamID)
         {
@@ -25,7 +50,7 @@ namespace UpgradeEveryRound
             int numChoices = Plugin.LimitedChoices ? Plugin.NumChoices : 8;
             List<int> choices = [0, 1, 2, 3, 4, 5, 6, 7];
 
-            bool[] allowed = { Plugin.AllowEnergy, Plugin.AllowExtraJump, Plugin.AllowRange, Plugin.AllowStrength, Plugin.AllowHealth, Plugin.AllowSpeed, Plugin.AllowTumbleLaunch, Plugin.AllowMapCount };
+            bool[] allowed = [Plugin.AllowEnergy, Plugin.AllowExtraJump, Plugin.AllowRange, Plugin.AllowStrength, Plugin.AllowHealth, Plugin.AllowSpeed, Plugin.AllowTumbleLaunch, Plugin.AllowMapCount];
 
             int removed = 0;
             for (int i = 0; i < choices.Count; i++)
@@ -36,6 +61,8 @@ namespace UpgradeEveryRound
                     removed++;
                 }
             }
+
+            numChoices = Mathf.Min(numChoices, choices.Count);
 
             bool choseUpgrade = false;
 

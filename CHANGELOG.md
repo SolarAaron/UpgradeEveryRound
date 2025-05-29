@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.3.0] - 2025-5-29
+### Code
+- Major refactor in how networking is handled to improve reliability.
+### Fixed
+- Bugs related race conditions and networking
+
 ## [1.2.4] - 2025-5-28
 ### Fixed
 - Upgrade menu is now always closeable by pressing ESC in case of plugin malfunction
