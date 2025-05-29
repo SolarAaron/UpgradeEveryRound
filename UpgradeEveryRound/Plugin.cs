@@ -10,10 +10,12 @@ using REPOLib;
 using REPOLib.Modules;
 using ExitGames.Client.Photon;
 using Photon.Realtime;
+using System.Collections.Specialized;
+using System.Text.RegularExpressions;
 
 namespace UpgradeEveryRound;
 
-[BepInPlugin(modGUID, modName, modVersion), BepInDependency("nickklmao.menulib", "2.1.3")]
+[BepInPlugin(modGUID, modName, modVersion), BepInDependency("nickklmao.menulib", "2.1.3"), BepInDependency("REPOLib", "2.1.0")]
 [BepInDependency(REPOLib.MyPluginInfo.PLUGIN_GUID, BepInDependency.DependencyFlags.HardDependency)]
 public class Plugin : BaseUnityPlugin
 {
@@ -25,6 +27,8 @@ public class Plugin : BaseUnityPlugin
     public static ConfigEntry<bool> limitedChoices;
     public static ConfigEntry<int> numChoices;
 
+    public static Plugin Instance;
+    
     public static ConfigEntry<bool> allowMapCount;
     public static ConfigEntry<bool> allowEnergy;
     public static ConfigEntry<bool> allowExtraJump;
@@ -33,7 +37,10 @@ public class Plugin : BaseUnityPlugin
     public static ConfigEntry<bool> allowHealth;
     public static ConfigEntry<bool> allowSpeed;
     public static ConfigEntry<bool> allowTumbleLaunch;
-
+    public static Dictionary<int, ConfigEntry<bool>> AllowExtras = new(); // bit index gets fixed on load
+    public static Dictionary<int, string> ExtraLabels = new();
+    private bool initialized = false;
+    
     public static NetworkData localNetworkData;
     public static NetworkData remoteNetworkData;
     public static NetworkData CurrentNetworkData {
@@ -52,6 +59,7 @@ public class Plugin : BaseUnityPlugin
     public static NetworkedEvent ConfigUpdateEvent;
 
     public static RaiseEventOptions ConfigUpdateEventOptions = new() { CachingOption = EventCaching.AddToRoomCache, Receivers = ReceiverGroup.Others};
+    public static List<BitVector32> ExtraConfigs = new(); // These hold the config data for mod upgrades
 
     internal static new ManualLogSource Logger;
     private readonly Harmony harmony = new Harmony(modGUID);
@@ -60,6 +68,7 @@ public class Plugin : BaseUnityPlugin
     {
         // Plugin startup logic
         Logger = base.Logger;
+        Instance = this;
 
         upgradesPerRound = Config.Bind("Upgrades", "Upgrades Per Round", 1, new ConfigDescription("Number of upgrades per round", new AcceptableValueRange<int>(0, 7)));
         limitedChoices = Config.Bind("Upgrades", "Limited random choices", false, new ConfigDescription("Only presents a fixed number of random options"));
@@ -87,8 +96,6 @@ public class Plugin : BaseUnityPlugin
         allowSpeed.SettingChanged += ConfigUpdated;
         allowTumbleLaunch.SettingChanged += ConfigUpdated;
 
-        localNetworkData = new();
-
         ConfigUpdateEvent = new NetworkedEvent("ConfigUpdate", HandleConfigUpdateEvent);
 
         harmony.PatchAll(typeof(SceneSwitchPatch));
@@ -111,6 +118,49 @@ public class Plugin : BaseUnityPlugin
         StartCoroutine(UERNetworkManager.Go());
 
         Logger.LogInfo($"Plugin {MyPluginInfo.PLUGIN_GUID} is loaded!");
+    }
+
+    public void BuildExtraUpgradeList() 
+    {
+        if(!initialized) 
+        {
+            int bitIndex = 0;
+            var labelSplitter = new Regex("(?<!^)(?=[A-Z])");
+
+            AllowExtras.Clear();
+            ExtraLabels.Clear();
+            ExtraConfigs.Clear();
+
+            foreach (var registeredUpgrade in Upgrades.PlayerUpgrades) {
+                var label = string.Join(" ", labelSplitter.Split(registeredUpgrade.UpgradeId));
+                var allowCustomUpgrade = Config.Bind("Enabled upgrades", $"Enable {label}", true,
+                                                     new ConfigDescription($"Allows {label} Upgrade to be chosen"));
+                AllowExtras.Add(bitIndex, allowCustomUpgrade);
+                ExtraLabels.Add(bitIndex, label);
+                allowCustomUpgrade.SettingChanged += ConfigUpdated;
+                UpdateExtraConfig(bitIndex, allowCustomUpgrade);
+                bitIndex++;
+            }
+            
+            localNetworkData = new(); // local network data needs the extra upgrade list
+            
+            initialized = true;
+        }
+    }
+
+    private static int UpdateExtraConfig(int configIndex, ConfigEntry<bool> allowCustomUpgrade) {
+        int bitField = configIndex / 32;
+        int bit = configIndex % 32;
+                                                     
+        while (ExtraConfigs.Count <= bitField) {
+            ExtraConfigs.Add(new BitVector32());
+        }
+        
+        var extraConfig = ExtraConfigs[bitField];
+        extraConfig[bit] = allowCustomUpgrade.Value;
+        ExtraConfigs[bitField] = extraConfig;
+        
+        return bitField;
     }
 
     //Allow config to be updated and synced midgame
@@ -147,6 +197,14 @@ public class Plugin : BaseUnityPlugin
     public static bool AllowHealth => CurrentNetworkData.allowHealth;
     public static bool AllowSpeed => CurrentNetworkData.allowSpeed;
     public static bool AllowTumbleLaunch => CurrentNetworkData.allowTumbleLaunch;
+
+    public static bool AllowCustomUpgradeByIndex(int configIndex) {
+        int bitField = configIndex / 32;
+        int bit = configIndex % 32;
+        var hostValue = new BitVector32(CurrentNetworkData.extraData[bitField]);
+        
+        return hostValue[bit];
+    }
 
 
     //Helper function containing a good chunk of the repeated code from the buttons

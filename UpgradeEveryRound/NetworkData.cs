@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Text;
 
@@ -22,6 +23,7 @@ namespace UpgradeEveryRound
         public bool allowHealth;
         public bool allowSpeed;
         public bool allowTumbleLaunch;
+        public int[] extraData;
 
         public NetworkData()
         {
@@ -37,6 +39,7 @@ namespace UpgradeEveryRound
             allowHealth = Plugin.allowHealth.Value;
             allowSpeed = Plugin.allowSpeed.Value;
             allowTumbleLaunch = Plugin.allowTumbleLaunch.Value;
+            extraData = Plugin.ExtraConfigs.Select(config => config.Data).ToArray(); // serializing the packed bits instead of a bool array
         }
 
         public static byte[] Serealize(object data)
