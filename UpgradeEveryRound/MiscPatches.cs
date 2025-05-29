@@ -19,8 +19,12 @@ namespace UpgradeEveryRound
     {
         static void Prefix(ref StatsManager __instance)
         {
+            Plugin.Instance.BuildExtraUpgradeList();
             __instance.dictionaryOfDictionaries.Add("playerUpgradesUsed", []); //Keeps track of how many upgrades each player has used so far
             __instance.dictionaryOfDictionaries.Add("UERDataSync", new Dictionary<string, int>() { ["HostConfig"] = Plugin.configData }); //Using this to sync any other necessary data across clients, currently config.
+            for (var i = 0; i < Plugin.ExtraConfigs.Count; i++) {
+                __instance.dictionaryOfDictionaries["UERDataSync"]["HostConfig.Extra." + i] = Plugin.ExtraConfigs[i].Data;
+            }
         }
     }
 
@@ -36,6 +40,9 @@ namespace UpgradeEveryRound
                 return;
             }
             __instance.dictionaryOfDictionaries["UERDataSync"]["HostConfig"] = Plugin.configData;
+            for (var i = 0; i < Plugin.ExtraConfigs.Count; i++) {
+                __instance.dictionaryOfDictionaries["UERDataSync"]["HostConfig.Extra." + i] = Plugin.ExtraConfigs[i].Data;
+            }
         }
 
     }
@@ -51,6 +58,9 @@ namespace UpgradeEveryRound
                 return;
             }
             __instance.dictionaryOfDictionaries["UERDataSync"]["HostConfig"] = Plugin.configData;
+            for (var i = 0; i < Plugin.ExtraConfigs.Count; i++) {
+                __instance.dictionaryOfDictionaries["UERDataSync"]["HostConfig.Extra." + i] = Plugin.ExtraConfigs[i].Data;
+            }
         }
 
     }

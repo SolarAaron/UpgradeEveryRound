@@ -6,16 +6,21 @@ using Photon.Pun;
 using BepInEx.Configuration;
 using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
+using System.Text.RegularExpressions;
+using REPOLib.Modules;
 
 namespace UpgradeEveryRound;
 
-[BepInPlugin(modGUID, modName, modVersion), BepInDependency("nickklmao.menulib", "2.1.3")]
+[BepInPlugin(modGUID, modName, modVersion), BepInDependency("nickklmao.menulib", "2.1.3"), BepInDependency("REPOLib", "2.1.0")]
 public class Plugin : BaseUnityPlugin
 {
     public const string modGUID = "dev.redfops.repo.upgradeeveryround";
     public const string modName = "Upgrade Every Round";
     public const string modVersion = "1.2.4";
 
+    public static Plugin Instance;
+    
     private static ConfigEntry<int> upgradesPerRound;
     private static ConfigEntry<bool> limitedChoices;
     private static ConfigEntry<int> numChoices;
@@ -28,9 +33,13 @@ public class Plugin : BaseUnityPlugin
     private static ConfigEntry<bool> allowHealth;
     private static ConfigEntry<bool> allowSpeed;
     private static ConfigEntry<bool> allowTumbleLaunch;
+    public static Dictionary<int, ConfigEntry<bool>> AllowExtras = new(); // bit index gets fixed on load
+    public static Dictionary<int, string> ExtraLabels = new();
+    private bool initialized = false;
 
     //Will contain all of the config data in one integer bitwise, used for syncing data with clients
     public static int configData = 0;
+    public static List<BitVector32> ExtraConfigs = new(); // These hold the config data for mod upgrades
 
     internal static new ManualLogSource Logger;
     private readonly Harmony harmony = new Harmony(modGUID);
@@ -39,6 +48,7 @@ public class Plugin : BaseUnityPlugin
     {
         // Plugin startup logic
         Logger = base.Logger;
+        Instance = this;
 
         upgradesPerRound = Config.Bind("Upgrades", "Upgrades Per Round", 1, new ConfigDescription("Number of upgrades per round", new AcceptableValueRange<int>(0, 7)));
         limitedChoices = Config.Bind("Upgrades", "Limited random choices", false, new ConfigDescription("Only presents a fixed number of random options"));
@@ -88,6 +98,60 @@ public class Plugin : BaseUnityPlugin
         Logger.LogInfo($"Plugin {MyPluginInfo.PLUGIN_GUID} is loaded!");
     }
 
+    public void BuildExtraUpgradeList() 
+    {
+        if(!initialized) 
+        {
+            int bitIndex = 0;
+            var labelSplitter = new Regex("(?<!^)(?=[A-Z])");
+
+            AllowExtras.Clear();
+            ExtraLabels.Clear();
+            ExtraConfigs.Clear();
+
+            foreach (var registeredUpgrade in Upgrades.PlayerUpgrades) {
+                var label = string.Join(" ", labelSplitter.Split(registeredUpgrade.UpgradeId));
+                var allowCustomUpgrade = Config.Bind("Enabled upgrades", $"Enable {label}", true,
+                                                     new ConfigDescription($"Allows {label} Upgrade to be chosen"));
+                AllowExtras.Add(bitIndex, allowCustomUpgrade);
+                ExtraLabels.Add(bitIndex, label);
+                allowCustomUpgrade.SettingChanged += ExtraConfigUpdated(bitIndex, allowCustomUpgrade);
+                UpdateExtraConfig(bitIndex, allowCustomUpgrade);
+                bitIndex++;
+            }
+            
+            initialized = true;
+        }
+    }
+
+    private EventHandler ExtraConfigUpdated(int bitIndex, ConfigEntry<bool> allowCustomUpgrade) {
+        return (sender, args) => {
+                   var bitField = UpdateExtraConfig(bitIndex, allowCustomUpgrade);
+                   if (!SemiFunc.IsMultiplayer() || !PhotonNetwork.IsMasterClient) {
+                       return;
+                   }
+
+                   PhotonView _photonView = PunManager.instance.GetComponent<PhotonView>();
+                   _photonView.RPC("UpdateStatRPC", RpcTarget.Others, "UERDataSync", "HostConfig.Extra." + bitField,
+                                   ExtraConfigs[bitField].Data);
+               };
+    }
+
+    private static int UpdateExtraConfig(int configIndex, ConfigEntry<bool> allowCustomUpgrade) {
+        int bitField = configIndex / 32;
+        int bit = configIndex % 32;
+                                                     
+        while (ExtraConfigs.Count <= bitField) {
+            ExtraConfigs.Add(new BitVector32());
+        }
+        
+        var extraConfig = ExtraConfigs[bitField];
+        extraConfig[bit] = allowCustomUpgrade.Value;
+        ExtraConfigs[bitField] = extraConfig;
+        
+        return bitField;
+    }
+
     //Allow config to be updated and synced midgame
     private void ConfigUpdated(object sender, EventArgs args)
     {
@@ -130,6 +194,14 @@ public class Plugin : BaseUnityPlugin
     public static bool AllowHealth => (StatsManager.instance.dictionaryOfDictionaries["UERDataSync"]["HostConfig"] & 0x1000) == 0x1000;
     public static bool AllowSpeed => (StatsManager.instance.dictionaryOfDictionaries["UERDataSync"]["HostConfig"] & 0x2000) == 0x2000;
     public static bool AllowTumbleLaunch => (StatsManager.instance.dictionaryOfDictionaries["UERDataSync"]["HostConfig"] & 0x4000) == 0x4000;
+
+    public static bool AllowCustomUpgradeByIndex(int configIndex) {
+        int bitField = configIndex / 32;
+        int bit = configIndex % 32;
+        var hostValue = new BitVector32(StatsManager.instance.dictionaryOfDictionaries["UERDataSync"]["HostConfig.Extra." + bitField]);
+        
+        return hostValue[bit];
+    }
 
 
     //Helper function containing a good chunk of the repeated code from the buttons
