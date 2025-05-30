@@ -30,7 +30,7 @@ public class Plugin : BaseUnityPlugin
 {
     public const string modGUID = "dev.redfops.repo.upgradeeveryround";
     public const string modName = "Upgrade Every Round";
-    public const string modVersion = "1.3.0";
+    public const string modVersion = "2.0.0";
 
     public static ConfigEntry<int> upgradesPerRound;
     public static ConfigEntry<bool> limitedChoices;
@@ -46,10 +46,6 @@ public class Plugin : BaseUnityPlugin
     public static ConfigEntry<bool> allowHealth;
     public static ConfigEntry<bool> allowSpeed;
     public static ConfigEntry<bool> allowTumbleLaunch;
-    public static Dictionary<int, ConfigEntry<bool>> AllowExtras = new(); // bit index gets fixed on load
-    public static Dictionary<int, string> ExtraLabels = new();
-    public static Dictionary<string, GameObject> ExtraUpgrades = new();
-    private bool initialized = false;
     
     public static NetworkData localNetworkData;
     public static NetworkData remoteNetworkData;
@@ -69,7 +65,7 @@ public class Plugin : BaseUnityPlugin
     public static NetworkedEvent ConfigUpdateEvent;
 
     public static RaiseEventOptions ConfigUpdateEventOptions = new() { CachingOption = EventCaching.AddToRoomCache, Receivers = ReceiverGroup.Others};
-    public static List<BitVector32> ExtraConfigs = new(); // These hold the config data for mod upgrades
+    
 
     internal static new ManualLogSource Logger;
     private readonly Harmony harmony = new Harmony(modGUID);
@@ -130,93 +126,8 @@ public class Plugin : BaseUnityPlugin
         Logger.LogInfo($"Plugin {MyPluginInfo.PLUGIN_GUID} is loaded!");
     }
 
-    public void BuildExtraUpgradeList() 
-    {
-        if(!initialized) 
-        {
-            Logger.LogMessage("Building extra upgrades list");
-            int bitIndex = 0;
-            var labelSplitter = new Regex("(?<!^)(?=[A-Z])");
-
-            AllowExtras.Clear();
-            ExtraLabels.Clear();
-            ExtraConfigs.Clear();
-
-            foreach (var registeredUpgrade in Upgrades.PlayerUpgrades) {
-                var label = string.Join(" ", labelSplitter.Split(registeredUpgrade.UpgradeId));
-                var allowCustomUpgrade = Config.Bind("Enabled upgrades", $"Enable {label}", true,
-                                                     new ConfigDescription($"Allows {label} Upgrade to be chosen"));
-                AllowExtras.Add(bitIndex, allowCustomUpgrade);
-                ExtraLabels.Add(bitIndex, label);
-                ExtraUpgrades.Add(label, null);
-                allowCustomUpgrade.SettingChanged += ConfigUpdated;
-                UpdateExtraConfig(bitIndex, allowCustomUpgrade);
-                bitIndex++;
-            }
-
-            string[] defaultUpgrades = ["Map Player Count", "Stamina", "Extra Jump", "Range", "Strength", "Health", "Sprint Speed", "Tumble Launch"];
-
-            var itemUpgrades = Items.GetItems().Where((x) => x.itemType == SemiFunc.itemType.item_upgrade);
-            foreach (var upgrade in itemUpgrades)
-            {
-                var label = upgrade.itemName[..^8];
-                
-                if (ExtraUpgrades.ContainsKey(label)) continue;
-                if (defaultUpgrades.Contains(label)) continue;
-
-                var allowCustomUpgrade = Config.Bind("Enabled upgrades", $"Enable {label}", true,
-                                     new ConfigDescription($"Allows {label} Upgrade to be chosen"));
-                AllowExtras.Add(bitIndex, allowCustomUpgrade);
-                ExtraLabels.Add(bitIndex, label);
-                ExtraUpgrades.Add(label, upgrade.prefab);
-                allowCustomUpgrade.SettingChanged += ConfigUpdated;
-                UpdateExtraConfig(bitIndex, allowCustomUpgrade);
-                bitIndex++;
-            }
-            
-            localNetworkData = new(); // local network data needs the extra upgrade list
-            
-            initialized = true;
-        }
-    }
-
-    private static int UpdateExtraConfig(int configIndex, ConfigEntry<bool> allowCustomUpgrade) {
-        int bitField = configIndex / 32;
-        int bit = configIndex % 32;
-                                                     
-        while (ExtraConfigs.Count <= bitField) {
-            ExtraConfigs.Add(new BitVector32());
-        }
-        
-        var extraConfig = ExtraConfigs[bitField];
-        extraConfig[bit] = allowCustomUpgrade.Value;
-        ExtraConfigs[bitField] = extraConfig;
-        
-        return bitField;
-    }
-
-    //For the record this hackiness is required just to support moreupgrades lol
-    public static void DoUpgrade(string upgradeLabel, string _steamID)
-    {
-        if (ExtraUpgrades[upgradeLabel] == null)
-        {
-            Upgrades.GetUpgrade(upgradeLabel.Replace(" ", ""))?.AddLevel(_steamID);
-            return;
-        }
-        //Yes, we literally instantiate it, use it, and get rid of it. It's awful but it's what you need to do for these ones.
-        var tempUpgradeObj = Object.Instantiate(ExtraUpgrades[upgradeLabel]);
-        var itemToggle = tempUpgradeObj.GetComponent<ItemToggle>();
-        var itemUpgrade = tempUpgradeObj.GetComponent<ItemUpgrade>();
-        var traverseToggle = Traverse.Create(itemToggle);
-        traverseToggle.Field<int>("playerTogglePhotonID").Value = SemiFunc.PhotonViewIDPlayerAvatarLocal();
-        var traverseUpgrade = Traverse.Create(itemUpgrade);
-        var method = traverseUpgrade.Method("PlayerUpgrade", []);
-        method.GetValue([]);
-        Object.Destroy(tempUpgradeObj);
-    }
-
     //Allow config to be updated and synced midgame
-    private void ConfigUpdated(object sender, EventArgs args)
+    internal static void ConfigUpdated(object sender, EventArgs args)
     {
         localNetworkData = new();
         if (!SemiFunc.IsMultiplayer() || !PhotonNetwork.IsMasterClient)
@@ -249,15 +160,6 @@ public class Plugin : BaseUnityPlugin
     public static bool AllowHealth => CurrentNetworkData.allowHealth;
     public static bool AllowSpeed => CurrentNetworkData.allowSpeed;
     public static bool AllowTumbleLaunch => CurrentNetworkData.allowTumbleLaunch;
-
-    public static bool AllowCustomUpgradeByIndex(int configIndex) {
-        int bitField = configIndex / 32;
-        int bit = configIndex % 32;
-        var hostValue = new BitVector32(CurrentNetworkData.extraData[bitField]);
-        
-        return hostValue[bit];
-    }
-
 
     //Helper function containing a good chunk of the repeated code from the buttons
     public static void ApplyUpgrade(string _steamID, REPOPopupPage popupPage)

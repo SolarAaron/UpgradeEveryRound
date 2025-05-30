@@ -1,5 +1,16 @@
 # Changelog
 
+## [2.0.0] - 2025-5-30
+### Added
+- Compatibility with REPOLib based upgrade mods thanks to [SolarAaron](https://github.com/SolarAaron)
+### Changed
+- UI Refactored, can now handle more than 8 upgrades.
+### Code
+- More refactoring and moving stuff around
+### Fixed
+- Only host upgrades applying
+- Clients being able to select more upgrades after reloading a save
+
 ## [1.3.0] - 2025-5-29
 ### Code
 - Major refactor in how networking is handled to improve reliability.

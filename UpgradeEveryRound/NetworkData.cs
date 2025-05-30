@@ -39,7 +39,7 @@ namespace UpgradeEveryRound
             allowHealth = Plugin.allowHealth.Value;
             allowSpeed = Plugin.allowSpeed.Value;
             allowTumbleLaunch = Plugin.allowTumbleLaunch.Value;
-            extraData = Plugin.ExtraConfigs.Select(config => config.Data).ToArray(); // serializing the packed bits instead of a bool array
+            extraData = ModUpgradeHandler.ExtraConfigs.Select(config => config.Data).ToArray(); // serializing the packed bits instead of a bool array
         }
 
         public static byte[] Serealize(object data)

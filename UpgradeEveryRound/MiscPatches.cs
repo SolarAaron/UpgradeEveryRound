@@ -17,10 +17,13 @@ namespace UpgradeEveryRound
     [HarmonyPatch("Start")]
     public static class StatsManagerStartPatch
     {
+        static void Prefix(StatsManager __instance)
+        {
+            __instance.dictionaryOfDictionaries.Add("playerUpgradesUsed", []); //Keeps track of how many upgrades each player has used so far
+        }
         static void Postfix(ref StatsManager __instance)
         {
-            Plugin.Instance.BuildExtraUpgradeList();
-            __instance.dictionaryOfDictionaries.Add("playerUpgradesUsed", []); //Keeps track of how many upgrades each player has used so far
+            ModUpgradeHandler.BuildExtraUpgradeList();
         }
     }
 
