@@ -12,11 +12,20 @@ using ExitGames.Client.Photon;
 using Photon.Realtime;
 using System.Collections.Specialized;
 using System.Text.RegularExpressions;
+using System.Linq;
+using UnityEngine;
+using Steamworks;
+using Object = UnityEngine.Object;
 
 namespace UpgradeEveryRound;
 
-[BepInPlugin(modGUID, modName, modVersion), BepInDependency("nickklmao.menulib", "2.1.3"), BepInDependency("REPOLib", "2.1.0")]
-[BepInDependency(REPOLib.MyPluginInfo.PLUGIN_GUID, BepInDependency.DependencyFlags.HardDependency)]
+[BepInPlugin(modGUID, modName, modVersion)]
+//HARD Dependencies. We need these to function.
+[BepInDependency("nickklmao.menulib", "2.1.3")]
+[BepInDependency("REPOLib", "2.1.0")]
+//These are just mods that add extra upgrades that we use dependencies to make sure we load AFTER
+[BepInDependency("bulletbot.moreupgrades", BepInDependency.DependencyFlags.SoftDependency)]
+[BepInDependency("NikkiUpgrades", BepInDependency.DependencyFlags.SoftDependency)]
 public class Plugin : BaseUnityPlugin
 {
     public const string modGUID = "dev.redfops.repo.upgradeeveryround";
@@ -39,6 +48,7 @@ public class Plugin : BaseUnityPlugin
     public static ConfigEntry<bool> allowTumbleLaunch;
     public static Dictionary<int, ConfigEntry<bool>> AllowExtras = new(); // bit index gets fixed on load
     public static Dictionary<int, string> ExtraLabels = new();
+    public static Dictionary<string, GameObject> ExtraUpgrades = new();
     private bool initialized = false;
     
     public static NetworkData localNetworkData;
@@ -124,6 +134,7 @@ public class Plugin : BaseUnityPlugin
     {
         if(!initialized) 
         {
+            Logger.LogMessage("Building extra upgrades list");
             int bitIndex = 0;
             var labelSplitter = new Regex("(?<!^)(?=[A-Z])");
 
@@ -137,6 +148,27 @@ public class Plugin : BaseUnityPlugin
                                                      new ConfigDescription($"Allows {label} Upgrade to be chosen"));
                 AllowExtras.Add(bitIndex, allowCustomUpgrade);
                 ExtraLabels.Add(bitIndex, label);
+                ExtraUpgrades.Add(label, null);
+                allowCustomUpgrade.SettingChanged += ConfigUpdated;
+                UpdateExtraConfig(bitIndex, allowCustomUpgrade);
+                bitIndex++;
+            }
+
+            string[] defaultUpgrades = ["Map Player Count", "Stamina", "Extra Jump", "Range", "Strength", "Health", "Sprint Speed", "Tumble Launch"];
+
+            var itemUpgrades = Items.GetItems().Where((x) => x.itemType == SemiFunc.itemType.item_upgrade);
+            foreach (var upgrade in itemUpgrades)
+            {
+                var label = upgrade.itemName[..^8];
+                
+                if (ExtraUpgrades.ContainsKey(label)) continue;
+                if (defaultUpgrades.Contains(label)) continue;
+
+                var allowCustomUpgrade = Config.Bind("Enabled upgrades", $"Enable {label}", true,
+                                     new ConfigDescription($"Allows {label} Upgrade to be chosen"));
+                AllowExtras.Add(bitIndex, allowCustomUpgrade);
+                ExtraLabels.Add(bitIndex, label);
+                ExtraUpgrades.Add(label, upgrade.prefab);
                 allowCustomUpgrade.SettingChanged += ConfigUpdated;
                 UpdateExtraConfig(bitIndex, allowCustomUpgrade);
                 bitIndex++;
@@ -161,6 +193,26 @@ public class Plugin : BaseUnityPlugin
         ExtraConfigs[bitField] = extraConfig;
         
         return bitField;
+    }
+
+    //For the record this hackiness is required just to support moreupgrades lol
+    public static void DoUpgrade(string upgradeLabel, string _steamID)
+    {
+        if (ExtraUpgrades[upgradeLabel] == null)
+        {
+            Upgrades.GetUpgrade(upgradeLabel.Replace(" ", ""))?.AddLevel(_steamID);
+            return;
+        }
+        //Yes, we literally instantiate it, use it, and get rid of it. It's awful but it's what you need to do for these ones.
+        var tempUpgradeObj = Object.Instantiate(ExtraUpgrades[upgradeLabel]);
+        var itemToggle = tempUpgradeObj.GetComponent<ItemToggle>();
+        var itemUpgrade = tempUpgradeObj.GetComponent<ItemUpgrade>();
+        var traverseToggle = Traverse.Create(itemToggle);
+        traverseToggle.Field<int>("playerTogglePhotonID").Value = SemiFunc.PhotonViewIDPlayerAvatarLocal();
+        var traverseUpgrade = Traverse.Create(itemUpgrade);
+        var method = traverseUpgrade.Method("PlayerUpgrade", []);
+        method.GetValue([]);
+        Object.Destroy(tempUpgradeObj);
     }
 
     //Allow config to be updated and synced midgame
