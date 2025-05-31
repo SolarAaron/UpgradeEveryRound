@@ -35,11 +35,21 @@ namespace UpgradeEveryRound
             }
             //Yes, we literally instantiate it, use it, and get rid of it. It's awful but it's what you need to do for these ones.
             var tempUpgradeObj = Object.Instantiate(ExtraUpgrades[upgradeLabel]);
+
+            foreach(var component in tempUpgradeObj.GetComponents<MonoBehaviour>())
+            {
+                var traverseComponent = Traverse.Create(component);
+                var methodStart = traverseComponent.Method("Start", []);
+                if (methodStart.MethodExists()) methodStart.GetValue([]);
+            }
+
             var itemToggle = tempUpgradeObj.GetComponent<ItemToggle>();
             var itemUpgrade = tempUpgradeObj.GetComponent<ItemUpgrade>();
             var traverseToggle = Traverse.Create(itemToggle);
             traverseToggle.Field<int>("playerTogglePhotonID").Value = SemiFunc.PhotonViewIDPlayerAvatarLocal();
             var traverseUpgrade = Traverse.Create(itemUpgrade);
+            
+            traverseUpgrade.Field<PhysGrabObjectImpactDetector>("impactDetector").Value.destroyDisable = true;
             var method = traverseUpgrade.Method("PlayerUpgrade", []);
             method.GetValue([]);
             Object.Destroy(tempUpgradeObj);
