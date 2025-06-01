@@ -46,7 +46,7 @@ namespace UpgradeEveryRound
             var itemToggle = tempUpgradeObj.GetComponent<ItemToggle>();
             var itemUpgrade = tempUpgradeObj.GetComponent<ItemUpgrade>();
             var traverseToggle = Traverse.Create(itemToggle);
-            traverseToggle.Field<int>("playerTogglePhotonID").Value = SemiFunc.PhotonViewIDPlayerAvatarLocal();
+            traverseToggle.Field<int>("playerTogglePhotonID").Value = SemiFunc.PlayerGetFromSteamID(_steamID).photonView.ViewID;
             var traverseUpgrade = Traverse.Create(itemUpgrade);
             
             traverseUpgrade.Field<PhysGrabObjectImpactDetector>("impactDetector").Value.destroyDisable = true;

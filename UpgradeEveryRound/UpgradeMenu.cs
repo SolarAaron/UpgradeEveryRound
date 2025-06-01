@@ -97,7 +97,7 @@ namespace UpgradeEveryRound
                         repoPopupPage.AddElement(parent => CreateButton(parent, "Stamina", () => 
                             { 
                                 if (SemiFunc.IsMasterClientOrSingleplayer()) PunManager.instance.UpgradePlayerEnergy(_steamID); 
-                                else PunManager.instance.GetComponent<PhotonView>().RPC("UpgradePlayerEnergyRPC", RpcTarget.All, _steamID, StatsManager.instance.playerUpgradeStamina[_steamID] + 1); 
+                                else Plugin.DoUpgradeClient("Stamina", _steamID);
                             }, i, numChoices, _steamID, repoPopupPage));
                         break;
 
@@ -105,7 +105,7 @@ namespace UpgradeEveryRound
                         repoPopupPage.AddElement(parent => CreateButton(parent, "Extra Jump", () => 
                             {
                                 if (SemiFunc.IsMasterClientOrSingleplayer()) PunManager.instance.UpgradePlayerExtraJump(_steamID);
-                                else PunManager.instance.GetComponent<PhotonView>().RPC("UpgradePlayerExtraJumpRPC", RpcTarget.All, _steamID, StatsManager.instance.playerUpgradeExtraJump[_steamID] + 1);
+                                else Plugin.DoUpgradeClient("Extra Jump", _steamID);
                             }, i, numChoices, _steamID, repoPopupPage));
                         break;
 
@@ -113,7 +113,7 @@ namespace UpgradeEveryRound
                         repoPopupPage.AddElement(parent => CreateButton(parent, "Range", () => 
                             {
                                 if (SemiFunc.IsMasterClientOrSingleplayer()) PunManager.instance.UpgradePlayerGrabRange(_steamID);
-                                else PunManager.instance.GetComponent<PhotonView>().RPC("UpgradePlayerGrabRangeRPC", RpcTarget.All, _steamID, StatsManager.instance.playerUpgradeRange[_steamID] + 1);
+                                else Plugin.DoUpgradeClient("Range", _steamID);
                             }, i, numChoices, _steamID, repoPopupPage));
                         break;
 
@@ -121,7 +121,7 @@ namespace UpgradeEveryRound
                         repoPopupPage.AddElement(parent => CreateButton(parent, "Strength", () => 
                             {
                                 if (SemiFunc.IsMasterClientOrSingleplayer()) PunManager.instance.UpgradePlayerGrabStrength(_steamID);
-                                else PunManager.instance.GetComponent<PhotonView>().RPC("UpgradePlayerGrabStrengthRPC", RpcTarget.All, _steamID, StatsManager.instance.playerUpgradeStrength[_steamID] + 1);
+                                else Plugin.DoUpgradeClient("Strength", _steamID);
                             }, i, numChoices, _steamID, repoPopupPage));
                         break;
 
@@ -129,15 +129,15 @@ namespace UpgradeEveryRound
                         repoPopupPage.AddElement(parent => CreateButton(parent, "Health", () => 
                             {
                                 if (SemiFunc.IsMasterClientOrSingleplayer()) PunManager.instance.UpgradePlayerHealth(_steamID);
-                                else PunManager.instance.GetComponent<PhotonView>().RPC("UpgradePlayerHealthRPC", RpcTarget.All, _steamID, StatsManager.instance.playerUpgradeHealth[_steamID] + 1);
+                                else Plugin.DoUpgradeClient("Health", _steamID);
                             }, i, numChoices, _steamID, repoPopupPage));
                         break;
 
                     case 5:
-                        repoPopupPage.AddElement(parent => CreateButton(parent, "Sprint speed", () => 
+                        repoPopupPage.AddElement(parent => CreateButton(parent, "Sprint Speed", () => 
                             {
                                 if (SemiFunc.IsMasterClientOrSingleplayer()) PunManager.instance.UpgradePlayerSprintSpeed(_steamID);
-                                else PunManager.instance.GetComponent<PhotonView>().RPC("UpgradePlayerSprintSpeedRPC", RpcTarget.All, _steamID, StatsManager.instance.playerUpgradeSpeed[_steamID] + 1);
+                                else Plugin.DoUpgradeClient("Sprint Speed", _steamID);
                             }, i, numChoices, _steamID, repoPopupPage));
                         break;
 
@@ -145,7 +145,7 @@ namespace UpgradeEveryRound
                         repoPopupPage.AddElement(parent => CreateButton(parent, "Tumble Launch", () => 
                             {
                                 if (SemiFunc.IsMasterClientOrSingleplayer()) PunManager.instance.UpgradePlayerTumbleLaunch(_steamID);
-                                else PunManager.instance.GetComponent<PhotonView>().RPC("UpgradePlayerTumbleLaunchRPC", RpcTarget.All, _steamID, StatsManager.instance.playerUpgradeLaunch[_steamID] + 1);
+                                else Plugin.DoUpgradeClient("Tumble Launch", _steamID);
                             }, i, numChoices, _steamID, repoPopupPage));
                         break;
 
@@ -153,12 +153,16 @@ namespace UpgradeEveryRound
                         repoPopupPage.AddElement(parent => CreateButton(parent, "Map Player Count", () => 
                             {
                                 if (SemiFunc.IsMasterClientOrSingleplayer()) PunManager.instance.UpgradeMapPlayerCount(_steamID);
-                                else PunManager.instance.GetComponent<PhotonView>().RPC("UpgradeMapPlayerCountRPC", RpcTarget.All, _steamID, StatsManager.instance.playerUpgradeMapPlayerCount[_steamID] + 1);
+                                else Plugin.DoUpgradeClient("Map Player Count", _steamID);
                             }, i, numChoices, _steamID, repoPopupPage));
                         break;
 
                     default:
-                        repoPopupPage.AddElement(parent => CreateButton(parent, ModUpgradeHandler.ExtraLabels[choice - 8], () => ModUpgradeHandler.DoUpgrade(ModUpgradeHandler.ExtraLabels[choice - 8], _steamID), i, numChoices, _steamID, repoPopupPage));
+                        repoPopupPage.AddElement(parent => CreateButton(parent, ModUpgradeHandler.ExtraLabels[choice - 8], () =>
+                        {
+                            if (SemiFunc.IsMasterClientOrSingleplayer()) ModUpgradeHandler.DoUpgrade(ModUpgradeHandler.ExtraLabels[choice - 8], _steamID);
+                            else Plugin.DoUpgradeClient(ModUpgradeHandler.ExtraLabels[choice - 8], _steamID);
+                        }, i, numChoices, _steamID, repoPopupPage));
                         break;
                 }
             }

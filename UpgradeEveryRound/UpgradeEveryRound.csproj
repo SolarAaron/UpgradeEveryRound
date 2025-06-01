@@ -4,14 +4,14 @@
     <GameBaseDir>E:\SteamLibrary\steamapps\common\REPO</GameBaseDir>
     <GameAssemblyDir>$(GameBaseDir)\REPO_Data\Managed</GameAssemblyDir>
     <TestProfileDir>C:\Users\cadyn\AppData\Roaming\r2modmanPlus-local\REPO\profiles\stimky</TestProfileDir>
-    <AssemblyVersion>2.0.1</AssemblyVersion>
+    <AssemblyVersion>2.0.3</AssemblyVersion>
   </PropertyGroup>
 
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
     <AssemblyName>UpgradeEveryRound</AssemblyName>
     <Product>Upgrade Every Round</Product>
-    <Version>2.0.1</Version>
+    <Version>2.0.3</Version>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <LangVersion>latest</LangVersion>
     <RestoreAdditionalProjectSources>

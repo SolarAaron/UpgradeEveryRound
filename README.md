@@ -1,5 +1,5 @@
 # UpgradeEveryRound
-## Now Compatible with modded upgrades!
+## Now Compatible with modded and beta upgrades!
 #### Thanks to [SolarAaron](https://github.com/SolarAaron) <3
 
 Simple mod meant for larger groups that ensures everybody gets at least one upgrade per round.

@@ -30,7 +30,7 @@ public class Plugin : BaseUnityPlugin
 {
     public const string modGUID = "dev.redfops.repo.upgradeeveryround";
     public const string modName = "Upgrade Every Round";
-    public const string modVersion = "2.0.2";
+    public const string modVersion = "2.0.3";
 
     public static ConfigEntry<int> upgradesPerRound;
     public static ConfigEntry<bool> limitedChoices;
@@ -63,8 +63,10 @@ public class Plugin : BaseUnityPlugin
     }
 
     public static NetworkedEvent ConfigUpdateEvent;
+    public static NetworkedEvent ClientUpgradeEvent;
 
     public static RaiseEventOptions ConfigUpdateEventOptions = new() { CachingOption = EventCaching.AddToRoomCache, Receivers = ReceiverGroup.Others};
+    public static RaiseEventOptions ClientUpgradeEventOptions = new() { Receivers = ReceiverGroup.MasterClient };
     
 
     internal static new ManualLogSource Logger;
@@ -103,6 +105,7 @@ public class Plugin : BaseUnityPlugin
         allowTumbleLaunch.SettingChanged += ConfigUpdated;
 
         ConfigUpdateEvent = new NetworkedEvent("ConfigUpdate", HandleConfigUpdateEvent);
+        ClientUpgradeEvent = new NetworkedEvent("ClientUpgrade", HandleClientUpgradeEvent);
 
         harmony.PatchAll(typeof(SceneSwitchPatch));
         harmony.PatchAll(typeof(OnLevelGenDonePatch));
@@ -110,6 +113,7 @@ public class Plugin : BaseUnityPlugin
         harmony.PatchAll(typeof(RunManagerMainMenuPatch));
         harmony.PatchAll(typeof(StatsManagerStartPatch));
         harmony.PatchAll(typeof(StatsUIPatch));
+        /*
         harmony.PatchAll(typeof(UpgradeMapPlayerCountPatch));
         harmony.PatchAll(typeof(UpgradePlayerEnergyPatch));
         harmony.PatchAll(typeof(UpgradePlayerExtraJumpPatch));
@@ -117,7 +121,7 @@ public class Plugin : BaseUnityPlugin
         harmony.PatchAll(typeof(UpgradePlayerGrabStrengthPatch));
         harmony.PatchAll(typeof(UpgradePlayerHealthPatch));
         harmony.PatchAll(typeof(UpgradePlayerSprintSpeedPatch));
-        harmony.PatchAll(typeof(UpgradePlayerTumbleLaunchPatch));
+        harmony.PatchAll(typeof(UpgradePlayerTumbleLaunchPatch));*/
 
         PhotonPeer.RegisterType(typeof(NetworkData), 0xF8, (x) => NetworkData.Serealize(x), NetworkData.Deserialize);
 
@@ -148,6 +152,52 @@ public class Plugin : BaseUnityPlugin
         remoteNetworkData = data;
     }
 
+    public static void DoUpgradeClient(string upgradeLabel, string _steamID)
+    {
+        string data = upgradeLabel + ";;;" + _steamID;
+        ClientUpgradeEvent.RaiseEvent(data, ClientUpgradeEventOptions, SendOptions.SendReliable);
+    }
+
+    private static void HandleClientUpgradeEvent(EventData eventData)
+    {
+        string data = (string)eventData.CustomData;
+        string upgrade = data.Split(";;;")[0];
+        string _steamID = data.Split(";;;")[1];
+
+        switch (upgrade)
+        {
+            case "Stamina":
+                PunManager.instance.UpgradePlayerEnergy(_steamID);
+                break;
+            case "Extra Jump":
+                PunManager.instance.UpgradePlayerExtraJump(_steamID);
+                break;
+            case "Range":
+                PunManager.instance.UpgradePlayerGrabRange(_steamID);
+                break;
+            case "Strength":
+                PunManager.instance.UpgradePlayerGrabStrength(_steamID);
+                break;
+            case "Health":
+                PunManager.instance.UpgradePlayerHealth(_steamID);
+                break;
+            case "Sprint Speed":
+                PunManager.instance.UpgradePlayerSprintSpeed(_steamID);
+                break;
+            case "Tumble Launch":
+                PunManager.instance.UpgradePlayerTumbleLaunch(_steamID);
+                break;
+            case "Map Player Count":
+                PunManager.instance.UpgradeMapPlayerCount(_steamID);
+                break;
+            default:
+                ModUpgradeHandler.DoUpgrade(upgrade, _steamID);
+                break;
+        }
+
+        PunManager.instance.UpdateStat("playerUpgradesUsed", _steamID, StatsManager.instance.dictionaryOfDictionaries["playerUpgradesUsed"][_steamID] + 1);
+    }
+
     //Get config from either synced data or directly depending on whether we're a host, client, or in singleplayer
     public static int UpgradesPerRound => CurrentNetworkData.upgradesPerRound;
     public static bool LimitedChoices => CurrentNetworkData.limitedChoices;
@@ -171,7 +221,9 @@ public class Plugin : BaseUnityPlugin
 
         int value = NumUpgradesUsed(_steamID) + 1;
         UERNetworkManager.upgradesUsedLocal = value;
-        PunManager.instance.UpdateStat("playerUpgradesUsed", _steamID, value);
+
+        //Otherwise the stat is updated by the host.
+        if(SemiFunc.IsMasterClientOrSingleplayer()) PunManager.instance.UpdateStat("playerUpgradesUsed", _steamID, value);
         
         //Close the menu
         UpgradeMenu.isOpen = false;

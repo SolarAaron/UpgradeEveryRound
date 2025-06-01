@@ -1,13 +1,17 @@
 # Changelog
 
+## [2.0.3] - 2025-6-1
+### Fixed
+- Bug causing upgrades to do nothing for non-hosts in multiplayer on beta branch
+
 ## [2.0.2] - 2025-5-31
-## Fixed
+### Fixed
 - Incompatibility with ItemBundles resulting in levels not loading
 
 ## [2.0.1] - 2025-5-31
-## Added
+### Added
 - Compatibility with new beta upgrades
-## Fixed
+### Fixed
 - Bug causing MoreUpgrades upgrades to be unselectable and brick the menu
 
 ## [2.0.0] - 2025-5-30
