@@ -85,7 +85,7 @@ namespace UpgradeEveryRound
                 var itemUpgrades = Items.GetItems().Where((x) => x.itemType == SemiFunc.itemType.item_upgrade);
                 foreach (var upgrade in itemUpgrades)
                 {
-                    var label = upgrade.itemName[..^8];
+                    var label = upgrade.itemName[..^8].Trim();
 
                     if (ExtraUpgrades.ContainsKey(label)) continue;
                     if (defaultUpgrades.Contains(label)) continue;

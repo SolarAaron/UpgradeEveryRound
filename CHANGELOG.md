@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.0.2] - 2025-5-31
+## Fixed
+- Incompatibility with ItemBundles resulting in levels not loading
+
+## [2.0.1] - 2025-5-31
+## Added
+- Compatibility with new beta upgrades
+## Fixed
+- Bug causing MoreUpgrades upgrades to be unselectable and brick the menu
+
 ## [2.0.0] - 2025-5-30
 ### Added
 - Compatibility with REPOLib based upgrade mods thanks to [SolarAaron](https://github.com/SolarAaron)
