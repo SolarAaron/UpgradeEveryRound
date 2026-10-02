@@ -1,5 +1,13 @@
 # Changelog
 
+## [3.0.0] - 2026-10-1
+### Fixed
+- Rebuilt against current release REPO version
+  - Added ability to pick new vanilla upgrades from menu 
+- Added handling in case guests have differing upgrade packages installed
+  - Ensured upgrade syncing uses the same order on guest and host
+- Improved handling to hide upgrade count from upgrade overlay in case of very old save data
+
 ## [2.0.3] - 2025-6-1
 ### Fixed
 - Bug causing upgrades to do nothing for non-hosts in multiplayer on beta branch

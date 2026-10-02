@@ -19,11 +19,20 @@ namespace UpgradeEveryRound
     {
         static void Prefix(StatsManager __instance)
         {
-            __instance.dictionaryOfDictionaries.Add("playerUpgradesUsed", []); //Keeps track of how many upgrades each player has used so far
+            UpgradeUsageData.Initialize(__instance);
         }
-        static void Postfix(ref StatsManager __instance)
+        static void Postfix(StatsManager __instance)
         {
             ModUpgradeHandler.BuildExtraUpgradeList();
+        }
+    }
+
+    [HarmonyPatch(typeof(StatsManager), "LoadGame")]
+    public static class StatsManagerLoadGamePatch
+    {
+        static void Postfix(StatsManager __instance)
+        {
+            UpgradeUsageData.Initialize(__instance);
         }
     }
 
@@ -34,6 +43,7 @@ namespace UpgradeEveryRound
         static void Prefix()
         {
             UpgradeMenu.isOpen = false;
+            Plugin.remoteNetworkData = null;
         }
     }
 }

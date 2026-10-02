@@ -30,7 +30,7 @@ namespace UpgradeEveryRound
 
                 if (!joinedGame)
                 {
-                    StatsManager.instance.dictionaryOfDictionaries["playerUpgradesUsed"][SteamClient.SteamId.Value.ToString()] = -1; //Set this to -1 locally so we know when it has been replaced by save data from the host.
+                    UpgradeUsageData.SetCount(StatsManager.instance, SteamClient.SteamId.Value.ToString(), -1); // Wait for the host's saved count.
                     joinedGame = true;
                 }
 
@@ -38,12 +38,12 @@ namespace UpgradeEveryRound
 
                 synced = StatsManager.instance.statsSynced;
 
-                if (!synced || !levelLoaded || menuOpened) continue;
+                if (!synced || !levelLoaded || menuOpened || Plugin.remoteNetworkData == null) continue;
 
-                if (StatsManager.instance.dictionaryOfDictionaries["playerUpgradesUsed"][SteamClient.SteamId.Value.ToString()] == -1) continue; //Wait until we recieve this data from the host at least once.
-                
+                int syncedUpgradeCount = UpgradeUsageData.GetCount(StatsManager.instance, SteamClient.SteamId.Value.ToString());
+                if (syncedUpgradeCount == -1) continue;
 
-                if (upgradesUsedLocal == -1) upgradesUsedLocal = StatsManager.instance.dictionaryOfDictionaries["playerUpgradesUsed"][SteamClient.SteamId.Value.ToString()];
+                if (upgradesUsedLocal == -1) upgradesUsedLocal = syncedUpgradeCount;
 
                 UpgradeMenu.OpenMenu();
                 menuOpened = true;

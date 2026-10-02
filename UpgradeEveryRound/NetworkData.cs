@@ -2,7 +2,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Text;
 
@@ -23,6 +22,12 @@ namespace UpgradeEveryRound
         public bool allowHealth;
         public bool allowSpeed;
         public bool allowTumbleLaunch;
+        public bool allowTumbleClimb;
+        public bool allowDeathHeadBattery;
+        public bool allowTumbleWings;
+        public bool allowCrouchRest;
+        // Keep custom-upgrade settings bit-packed for Photon; the hash detects mismatched local bit ordering.
+        public int extraConfigHash;
         public int[] extraData;
 
         public NetworkData()
@@ -39,7 +44,12 @@ namespace UpgradeEveryRound
             allowHealth = Plugin.allowHealth.Value;
             allowSpeed = Plugin.allowSpeed.Value;
             allowTumbleLaunch = Plugin.allowTumbleLaunch.Value;
-            extraData = ModUpgradeHandler.ExtraConfigs.Select(config => config.Data).ToArray(); // serializing the packed bits instead of a bool array
+            allowTumbleClimb = Plugin.allowTumbleClimb.Value;
+            allowDeathHeadBattery = Plugin.allowDeathHeadBattery.Value;
+            allowTumbleWings = Plugin.allowTumbleWings.Value;
+            allowCrouchRest = Plugin.allowCrouchRest.Value;
+            extraConfigHash = ModUpgradeHandler.GetExtraConfigSchemaHash();
+            extraData = ModUpgradeHandler.GetExtraConfigBits();
         }
 
         public static byte[] Serealize(object data)

@@ -52,9 +52,14 @@ namespace UpgradeEveryRound
             // Nevermind, let them close it in case the plugin breaks
             //repoPopupPage.onEscapePressed = new REPOPopupPage.ShouldCloseMenuDelegate(() => false);
 
-            List<int> choices = [0, 1, 2, 3, 4, 5, 6, 7];
+            List<int> choices = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
 
-            List<bool> allowed = [Plugin.AllowEnergy, Plugin.AllowExtraJump, Plugin.AllowRange, Plugin.AllowStrength, Plugin.AllowHealth, Plugin.AllowSpeed, Plugin.AllowTumbleLaunch, Plugin.AllowMapCount];
+            List<bool> allowed = [
+                Plugin.AllowEnergy, Plugin.AllowExtraJump, Plugin.AllowRange, Plugin.AllowStrength,
+                Plugin.AllowHealth, Plugin.AllowSpeed, Plugin.AllowTumbleLaunch, Plugin.AllowMapCount,
+                Plugin.AllowTumbleClimb, Plugin.AllowDeathHeadBattery, Plugin.AllowTumbleWings,
+                Plugin.AllowCrouchRest
+            ];
 
             foreach (var customAllow in ModUpgradeHandler.AllowExtras) {
                 var baseIndex = customAllow.Key;
@@ -157,11 +162,46 @@ namespace UpgradeEveryRound
                             }, i, numChoices, _steamID, repoPopupPage));
                         break;
 
+                    case 8:
+                        repoPopupPage.AddElement(parent => CreateButton(parent, "Tumble Climb", () =>
+                            {
+                                if (SemiFunc.IsMasterClientOrSingleplayer()) PunManager.instance.UpgradePlayerTumbleClimb(_steamID);
+                                else Plugin.DoUpgradeClient("Tumble Climb", _steamID);
+                            }, i, numChoices, _steamID, repoPopupPage));
+                        break;
+
+                    case 9:
+                        repoPopupPage.AddElement(parent => CreateButton(parent, "Death Head Battery", () =>
+                            {
+                                if (SemiFunc.IsMasterClientOrSingleplayer()) PunManager.instance.UpgradeDeathHeadBattery(_steamID);
+                                else Plugin.DoUpgradeClient("Death Head Battery", _steamID);
+                            }, i, numChoices, _steamID, repoPopupPage));
+                        break;
+
+                    case 10:
+                        repoPopupPage.AddElement(parent => CreateButton(parent, "Tumble Wings", () =>
+                            {
+                                if (SemiFunc.IsMasterClientOrSingleplayer()) PunManager.instance.UpgradePlayerTumbleWings(_steamID);
+                                else Plugin.DoUpgradeClient("Tumble Wings", _steamID);
+                            }, i, numChoices, _steamID, repoPopupPage));
+                        break;
+
+                    case 11:
+                        repoPopupPage.AddElement(parent => CreateButton(parent, "Crouch Rest", () =>
+                            {
+                                if (SemiFunc.IsMasterClientOrSingleplayer()) PunManager.instance.UpgradePlayerCrouchRest(_steamID);
+                                else Plugin.DoUpgradeClient("Crouch Rest", _steamID);
+                            }, i, numChoices, _steamID, repoPopupPage));
+                        break;
+
                     default:
-                        repoPopupPage.AddElement(parent => CreateButton(parent, ModUpgradeHandler.ExtraLabels[choice - 8], () =>
+                        int extraIndex = choice - 12;
+                        string extraLabel = ModUpgradeHandler.ExtraLabels[extraIndex];
+                        string extraKey = ModUpgradeHandler.ExtraKeys[extraIndex];
+                        repoPopupPage.AddElement(parent => CreateButton(parent, extraLabel, () =>
                         {
-                            if (SemiFunc.IsMasterClientOrSingleplayer()) ModUpgradeHandler.DoUpgrade(ModUpgradeHandler.ExtraLabels[choice - 8], _steamID);
-                            else Plugin.DoUpgradeClient(ModUpgradeHandler.ExtraLabels[choice - 8], _steamID);
+                            if (SemiFunc.IsMasterClientOrSingleplayer()) ModUpgradeHandler.DoUpgrade(extraKey, _steamID);
+                            else Plugin.DoUpgradeClient(extraKey, _steamID);
                         }, i, numChoices, _steamID, repoPopupPage));
                         break;
                 }

@@ -22,15 +22,15 @@ namespace UpgradeEveryRound;
 [BepInPlugin(modGUID, modName, modVersion)]
 //HARD Dependencies. We need these to function.
 [BepInDependency("nickklmao.menulib", "2.1.3")]
-[BepInDependency("REPOLib", "2.1.0")]
+[BepInDependency("REPOLib", "4.2.0")]
 //These are just mods that add extra upgrades that we use dependencies to make sure we load AFTER
 [BepInDependency("bulletbot.moreupgrades", BepInDependency.DependencyFlags.SoftDependency)]
 [BepInDependency("NikkiUpgrades", BepInDependency.DependencyFlags.SoftDependency)]
 public class Plugin : BaseUnityPlugin
 {
-    public const string modGUID = "dev.redfops.repo.upgradeeveryround";
-    public const string modName = "Upgrade Every Round";
-    public const string modVersion = "2.0.3";
+    public const string modGUID = "dev.redfops.repo.upgradeeveryround"; //keeping original guid
+    public const string modName = "Upgrade Every Round Updated";
+    public const string modVersion = "3.0.0";
 
     public static ConfigEntry<int> upgradesPerRound;
     public static ConfigEntry<bool> limitedChoices;
@@ -46,6 +46,10 @@ public class Plugin : BaseUnityPlugin
     public static ConfigEntry<bool> allowHealth;
     public static ConfigEntry<bool> allowSpeed;
     public static ConfigEntry<bool> allowTumbleLaunch;
+    public static ConfigEntry<bool> allowTumbleClimb;
+    public static ConfigEntry<bool> allowDeathHeadBattery;
+    public static ConfigEntry<bool> allowTumbleWings;
+    public static ConfigEntry<bool> allowCrouchRest;
     
     public static NetworkData localNetworkData;
     public static NetworkData remoteNetworkData;
@@ -80,7 +84,7 @@ public class Plugin : BaseUnityPlugin
 
         upgradesPerRound = Config.Bind("Upgrades", "Upgrades Per Round", 1, new ConfigDescription("Number of upgrades per round", new AcceptableValueRange<int>(0, 7)));
         limitedChoices = Config.Bind("Upgrades", "Limited random choices", false, new ConfigDescription("Only presents a fixed number of random options"));
-        numChoices = Config.Bind("Upgrades", "Number of choices", 3, new ConfigDescription("Number of options to choose from per upgrade", new AcceptableValueRange<int>(1, 8)));
+        numChoices = Config.Bind("Upgrades", "Number of choices", 3, new ConfigDescription("Number of options to choose from per upgrade", new AcceptableValueRange<int>(1, 12)));
 
         allowMapCount = Config.Bind("Enabled upgrades", "Enable Map Player Count", true, new ConfigDescription("Allows Map Player Count Upgrade to be chosen"));
         allowEnergy = Config.Bind("Enabled upgrades", "Enable Stamina", true, new ConfigDescription("Allows Stamina Upgrade to be chosen"));
@@ -90,6 +94,10 @@ public class Plugin : BaseUnityPlugin
         allowHealth = Config.Bind("Enabled upgrades", "Enable Health", true, new ConfigDescription("Allows Health Upgrade to be chosen"));
         allowSpeed = Config.Bind("Enabled upgrades", "Enable Speed", true, new ConfigDescription("Allows Speed Upgrade to be chosen"));
         allowTumbleLaunch = Config.Bind("Enabled upgrades", "Enable Tumble Launch", true, new ConfigDescription("Allows Tumble Launch Upgrade to be chosen"));
+        allowTumbleClimb = Config.Bind("Enabled upgrades", "Enable Tumble Climb", true, new ConfigDescription("Allows Tumble Climb Upgrade to be chosen"));
+        allowDeathHeadBattery = Config.Bind("Enabled upgrades", "Enable Death Head Battery", true, new ConfigDescription("Allows Death Head Battery Upgrade to be chosen"));
+        allowTumbleWings = Config.Bind("Enabled upgrades", "Enable Tumble Wings", true, new ConfigDescription("Allows Tumble Wings Upgrade to be chosen"));
+        allowCrouchRest = Config.Bind("Enabled upgrades", "Enable Crouch Rest", true, new ConfigDescription("Allows Crouch Rest Upgrade to be chosen"));
 
         upgradesPerRound.SettingChanged += ConfigUpdated;
         limitedChoices.SettingChanged += ConfigUpdated;
@@ -103,25 +111,22 @@ public class Plugin : BaseUnityPlugin
         allowHealth.SettingChanged += ConfigUpdated;
         allowSpeed.SettingChanged += ConfigUpdated;
         allowTumbleLaunch.SettingChanged += ConfigUpdated;
+        allowTumbleClimb.SettingChanged += ConfigUpdated;
+        allowDeathHeadBattery.SettingChanged += ConfigUpdated;
+        allowTumbleWings.SettingChanged += ConfigUpdated;
+        allowCrouchRest.SettingChanged += ConfigUpdated;
 
         ConfigUpdateEvent = new NetworkedEvent("ConfigUpdate", HandleConfigUpdateEvent);
         ClientUpgradeEvent = new NetworkedEvent("ClientUpgrade", HandleClientUpgradeEvent);
+        gameObject.AddComponent<UpgradeEveryRoundPhotonCallbacks>();
 
         harmony.PatchAll(typeof(SceneSwitchPatch));
         harmony.PatchAll(typeof(OnLevelGenDonePatch));
         harmony.PatchAll(typeof(SteamManagerPatch));
         harmony.PatchAll(typeof(RunManagerMainMenuPatch));
         harmony.PatchAll(typeof(StatsManagerStartPatch));
+        harmony.PatchAll(typeof(StatsManagerLoadGamePatch));
         harmony.PatchAll(typeof(StatsUIPatch));
-        /*
-        harmony.PatchAll(typeof(UpgradeMapPlayerCountPatch));
-        harmony.PatchAll(typeof(UpgradePlayerEnergyPatch));
-        harmony.PatchAll(typeof(UpgradePlayerExtraJumpPatch));
-        harmony.PatchAll(typeof(UpgradePlayerGrabRangePatch));
-        harmony.PatchAll(typeof(UpgradePlayerGrabStrengthPatch));
-        harmony.PatchAll(typeof(UpgradePlayerHealthPatch));
-        harmony.PatchAll(typeof(UpgradePlayerSprintSpeedPatch));
-        harmony.PatchAll(typeof(UpgradePlayerTumbleLaunchPatch));*/
 
         PhotonPeer.RegisterType(typeof(NetworkData), 0xF8, (x) => NetworkData.Serealize(x), NetworkData.Deserialize);
 
@@ -143,59 +148,93 @@ public class Plugin : BaseUnityPlugin
 
     public static void SendConfig()
     {
+        if (PhotonNetwork.InRoom && !PhotonNetwork.IsMasterClient) return;
+        localNetworkData ??= new();
         ConfigUpdateEvent.RaiseEvent(localNetworkData, ConfigUpdateEventOptions, SendOptions.SendReliable);
     }
 
     private static void HandleConfigUpdateEvent(EventData eventData)
     {
-        NetworkData data = (NetworkData)eventData.CustomData;
+        if (PhotonNetwork.MasterClient == null || eventData.Sender != PhotonNetwork.MasterClient.ActorNumber)
+        {
+            Logger.LogWarning("Ignoring upgrade configuration sent by a non-master client.");
+            return;
+        }
+
+        if (eventData.CustomData is not NetworkData data)
+        {
+            Logger.LogWarning("Ignoring invalid upgrade configuration data.");
+            return;
+        }
+
         remoteNetworkData = data;
     }
 
-    public static void DoUpgradeClient(string upgradeLabel, string _steamID)
+    public static void DoUpgradeClient(string upgradeId, string _steamID)
     {
-        string data = upgradeLabel + ";;;" + _steamID;
+        Hashtable data = new()
+        {
+            { "upgrade", upgradeId },
+            { "steamID", _steamID }
+        };
         ClientUpgradeEvent.RaiseEvent(data, ClientUpgradeEventOptions, SendOptions.SendReliable);
     }
 
     private static void HandleClientUpgradeEvent(EventData eventData)
     {
-        string data = (string)eventData.CustomData;
-        string upgrade = data.Split(";;;")[0];
-        string _steamID = data.Split(";;;")[1];
+        if (eventData.CustomData is not Hashtable data
+            || data["upgrade"] is not string upgrade
+            || data["steamID"] is not string steamID)
+        {
+            Logger.LogWarning("Ignoring invalid upgrade request data.");
+            return;
+        }
 
         switch (upgrade)
         {
             case "Stamina":
-                PunManager.instance.UpgradePlayerEnergy(_steamID);
+                PunManager.instance.UpgradePlayerEnergy(steamID);
                 break;
             case "Extra Jump":
-                PunManager.instance.UpgradePlayerExtraJump(_steamID);
+                PunManager.instance.UpgradePlayerExtraJump(steamID);
                 break;
             case "Range":
-                PunManager.instance.UpgradePlayerGrabRange(_steamID);
+                PunManager.instance.UpgradePlayerGrabRange(steamID);
                 break;
             case "Strength":
-                PunManager.instance.UpgradePlayerGrabStrength(_steamID);
+                PunManager.instance.UpgradePlayerGrabStrength(steamID);
                 break;
             case "Health":
-                PunManager.instance.UpgradePlayerHealth(_steamID);
+                PunManager.instance.UpgradePlayerHealth(steamID);
                 break;
             case "Sprint Speed":
-                PunManager.instance.UpgradePlayerSprintSpeed(_steamID);
+                PunManager.instance.UpgradePlayerSprintSpeed(steamID);
                 break;
             case "Tumble Launch":
-                PunManager.instance.UpgradePlayerTumbleLaunch(_steamID);
+                PunManager.instance.UpgradePlayerTumbleLaunch(steamID);
                 break;
             case "Map Player Count":
-                PunManager.instance.UpgradeMapPlayerCount(_steamID);
+                PunManager.instance.UpgradeMapPlayerCount(steamID);
+                break;
+            case "Tumble Climb":
+                PunManager.instance.UpgradePlayerTumbleClimb(steamID);
+                break;
+            case "Death Head Battery":
+                PunManager.instance.UpgradeDeathHeadBattery(steamID);
+                break;
+            case "Tumble Wings":
+                PunManager.instance.UpgradePlayerTumbleWings(steamID);
+                break;
+            case "Crouch Rest":
+                PunManager.instance.UpgradePlayerCrouchRest(steamID);
                 break;
             default:
-                ModUpgradeHandler.DoUpgrade(upgrade, _steamID);
+                if (!ModUpgradeHandler.DoUpgrade(upgrade, steamID)) return;
                 break;
         }
 
-        PunManager.instance.UpdateStat("playerUpgradesUsed", _steamID, StatsManager.instance.dictionaryOfDictionaries["playerUpgradesUsed"][_steamID] + 1);
+        int upgradesUsed = UpgradeUsageData.GetCount(StatsManager.instance, steamID) + 1;
+        PunManager.instance.UpdateStat(UpgradeUsageData.DictionaryName, steamID, upgradesUsed);
     }
 
     //Get config from either synced data or directly depending on whether we're a host, client, or in singleplayer
@@ -210,6 +249,10 @@ public class Plugin : BaseUnityPlugin
     public static bool AllowHealth => CurrentNetworkData.allowHealth;
     public static bool AllowSpeed => CurrentNetworkData.allowSpeed;
     public static bool AllowTumbleLaunch => CurrentNetworkData.allowTumbleLaunch;
+    public static bool AllowTumbleClimb => CurrentNetworkData.allowTumbleClimb;
+    public static bool AllowDeathHeadBattery => CurrentNetworkData.allowDeathHeadBattery;
+    public static bool AllowTumbleWings => CurrentNetworkData.allowTumbleWings;
+    public static bool AllowCrouchRest => CurrentNetworkData.allowCrouchRest;
 
     //Helper function containing a good chunk of the repeated code from the buttons
     public static void ApplyUpgrade(string _steamID, REPOPopupPage popupPage)
@@ -223,7 +266,7 @@ public class Plugin : BaseUnityPlugin
         UERNetworkManager.upgradesUsedLocal = value;
 
         //Otherwise the stat is updated by the host.
-        if(SemiFunc.IsMasterClientOrSingleplayer()) PunManager.instance.UpdateStat("playerUpgradesUsed", _steamID, value);
+        if(SemiFunc.IsMasterClientOrSingleplayer()) PunManager.instance.UpdateStat(UpgradeUsageData.DictionaryName, _steamID, value);
         
         //Close the menu
         UpgradeMenu.isOpen = false;
@@ -242,6 +285,17 @@ public class Plugin : BaseUnityPlugin
     public static int NumUpgradesUsed(string _steamID)
     {
         if (!SemiFunc.IsMasterClientOrSingleplayer()) return UERNetworkManager.upgradesUsedLocal;
-        return StatsManager.instance.dictionaryOfDictionaries["playerUpgradesUsed"][_steamID];
+        return UpgradeUsageData.GetCount(StatsManager.instance, _steamID);
+    }
+}
+
+internal sealed class UpgradeEveryRoundPhotonCallbacks : MonoBehaviourPunCallbacks
+{
+    public override void OnMasterClientSwitched(Player newMasterClient)
+    {
+        if (PhotonNetwork.IsMasterClient)
+        {
+            Plugin.SendConfig();
+        }
     }
 }
