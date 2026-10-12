@@ -1,6 +1,6 @@
 {
     "name": "UpgradeEveryRoundUpdated",
-    "version_number": "3.0.0",
+    "version_number": "3.0.1",
     "website_url": "https://github.com/SolarAaron/UpgradeEveryRound",
     "description": "Simple mod which allows players to choose an upgrade for free upon loading into the shop.",
     "dependencies": [

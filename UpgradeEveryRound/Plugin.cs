@@ -30,7 +30,7 @@ public class Plugin : BaseUnityPlugin
 {
     public const string modGUID = "dev.redfops.repo.upgradeeveryround"; //keeping original guid
     public const string modName = "Upgrade Every Round Updated";
-    public const string modVersion = "3.0.0";
+    public const string modVersion = "3.0.1";
 
     public static ConfigEntry<int> upgradesPerRound;
     public static ConfigEntry<bool> limitedChoices;
@@ -122,7 +122,6 @@ public class Plugin : BaseUnityPlugin
 
         harmony.PatchAll(typeof(SceneSwitchPatch));
         harmony.PatchAll(typeof(OnLevelGenDonePatch));
-        harmony.PatchAll(typeof(SteamManagerPatch));
         harmony.PatchAll(typeof(RunManagerMainMenuPatch));
         harmony.PatchAll(typeof(StatsManagerStartPatch));
         harmony.PatchAll(typeof(StatsManagerLoadGamePatch));
@@ -148,7 +147,7 @@ public class Plugin : BaseUnityPlugin
 
     public static void SendConfig()
     {
-        if (PhotonNetwork.InRoom && !PhotonNetwork.IsMasterClient) return;
+        if (!PhotonNetwork.InRoom || !PhotonNetwork.IsMasterClient) return;
         localNetworkData ??= new();
         ConfigUpdateEvent.RaiseEvent(localNetworkData, ConfigUpdateEventOptions, SendOptions.SendReliable);
     }
@@ -291,8 +290,18 @@ public class Plugin : BaseUnityPlugin
 
 internal sealed class UpgradeEveryRoundPhotonCallbacks : MonoBehaviourPunCallbacks
 {
+    public override void OnJoinedRoom()
+    {
+        Plugin.remoteNetworkData = null;
+        if (PhotonNetwork.IsMasterClient)
+        {
+            Plugin.SendConfig();
+        }
+    }
+
     public override void OnMasterClientSwitched(Player newMasterClient)
     {
+        Plugin.remoteNetworkData = null;
         if (PhotonNetwork.IsMasterClient)
         {
             Plugin.SendConfig();
