@@ -21,8 +21,8 @@ namespace UpgradeEveryRound;
 
 [BepInPlugin(modGUID, modName, modVersion)]
 //HARD Dependencies. We need these to function.
-[BepInDependency("nickklmao.menulib", "2.1.3")]
-[BepInDependency("REPOLib", "4.2.0")]
+[BepInDependency("nickklmao.menulib", "2.6.0")]
+[BepInDependency("REPOLib", "4.3.0")]
 //These are just mods that add extra upgrades that we use dependencies to make sure we load AFTER
 [BepInDependency("bulletbot.moreupgrades", BepInDependency.DependencyFlags.SoftDependency)]
 [BepInDependency("NikkiUpgrades", BepInDependency.DependencyFlags.SoftDependency)]
@@ -30,7 +30,7 @@ public class Plugin : BaseUnityPlugin
 {
     public const string modGUID = "dev.redfops.repo.upgradeeveryround"; //keeping original guid
     public const string modName = "Upgrade Every Round Updated";
-    public const string modVersion = "3.0.1";
+    public const string modVersion = "3.0.2";
 
     public static ConfigEntry<int> upgradesPerRound;
     public static ConfigEntry<bool> limitedChoices;

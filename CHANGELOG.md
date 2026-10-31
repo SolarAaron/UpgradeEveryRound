@@ -1,5 +1,14 @@
 # Changelog
 
+## [3.0.2] - 2026-10-30
+### Changed
+- Updated the minimum REPOLib dependency to 4.3.0.
+
+## [3.0.1] - 2026-10-29
+### Fixed
+- Removed the obsolete Steam lobby patch that prevented startup on the current game version.
+- Updated MenuLib, REPOLib, and BepInEx dependencies to the current packages.
+
 ## [3.0.0] - 2026-10-1
 ### Fixed
 - Rebuilt against current release REPO version

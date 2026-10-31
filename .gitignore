@@ -365,3 +365,6 @@ Directory.Repo.props
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
 /.idea
+
+/package/skel/plugins/
+/package/*.zip
