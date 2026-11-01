@@ -1,5 +1,9 @@
 # Changelog
 
+## [3.0.3] - 2026-11-1
+### Fixed
+- Match new level generator done RPC timings.
+
 ## [3.0.2] - 2026-10-30
 ### Changed
 - Updated the minimum REPOLib dependency to 4.3.0.

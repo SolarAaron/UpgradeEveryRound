@@ -11,14 +11,14 @@
     <BepInExCoreDir Condition="'$(BepInExCoreDir)' == ''">$(BepInExDirectory)/core</BepInExCoreDir>
     <MenuLibAssemblyPath Condition="'$(MenuLibAssemblyPath)' == ''">$(BepInExDirectory)/plugins/REPOModding-MenuLib/MenuLib.dll</MenuLibAssemblyPath>
     <REPOLibAssemblyPath Condition="'$(REPOLibAssemblyPath)' == ''">$(BepInExDirectory)/plugins/Zehs-REPOLib/REPOLib.dll</REPOLibAssemblyPath>
-    <AssemblyVersion>3.0.2</AssemblyVersion>
+    <AssemblyVersion>3.0.3</AssemblyVersion>
   </PropertyGroup>
 
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
     <AssemblyName>UpgradeEveryRound</AssemblyName>
     <Product>Upgrade Every Round</Product>
-    <Version>3.0.2</Version>
+    <Version>3.0.4</Version>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <LangVersion>latest</LangVersion>
     <RestoreAdditionalProjectSources>
