@@ -1,5 +1,9 @@
 # Changelog
 
+## [3.0.4] - 2026-11-2
+### Fixed
+- Attempt to show upgrade pop up later when spawning in a level to fix inconsistent triggering.
+
 ## [3.0.3] - 2026-11-1
 ### Fixed
 - Match new level generator done RPC timings.
