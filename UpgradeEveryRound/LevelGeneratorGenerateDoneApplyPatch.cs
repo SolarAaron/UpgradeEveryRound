@@ -12,6 +12,7 @@ namespace UpgradeEveryRound
         internal static void Postfix(LevelGenerator __instance)
         {
             UERNetworkManager.levelLoaded = true;
+            Plugin.Logger.LogInfo($"[UER] GenerateDoneApply completed; master={SemiFunc.IsMasterClientOrSingleplayer()}, generated={__instance.Generated}, levelsCompleted={RunManager.instance.levelsCompleted}");
 
             if (SemiFunc.IsMasterClientOrSingleplayer())
             {
@@ -23,11 +24,15 @@ namespace UpgradeEveryRound
         {
             yield return null;
 
-            if (generator != null
-                && LevelGenerator.Instance == generator
-                && SemiFunc.LevelGenDone())
+            bool isCurrentGenerator = generator != null && LevelGenerator.Instance == generator;
+            bool generationDone = SemiFunc.LevelGenDone();
+            if (isCurrentGenerator && generationDone)
             {
                 UpgradeMenu.OpenMenu();
+            }
+            else
+            {
+                Plugin.Logger.LogInfo($"[UER] Host popup deferred: currentGenerator={isCurrentGenerator}, levelGenDone={generationDone}");
             }
         }
     }

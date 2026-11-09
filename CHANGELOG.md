@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.0.5] - 2026-11-9
+### Fixed
+- Improve client-side opening logic for upgrade popup.
+### Changed
+- Update MenuLib dependency to 2.6.2.
+
 ## [3.0.4] - 2026-11-2
 ### Fixed
 - Attempt to show upgrade pop up later when spawning in a level to fix inconsistent triggering.

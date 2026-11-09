@@ -18,9 +18,18 @@ namespace UpgradeEveryRound
 
         public static void OpenMenu()
         {
-            if (isOpen) return;
+            if (isOpen)
+            {
+                Plugin.Logger.LogInfo("[UER] Popup request skipped: an upgrade menu is already open.");
+                return;
+            }
+
             Level[] bannedLevels = [RunManager.instance.levelMainMenu, RunManager.instance.levelLobbyMenu, RunManager.instance.levelTutorial];
-            if (bannedLevels.Contains(RunManager.instance.levelCurrent)) return;
+            if (bannedLevels.Contains(RunManager.instance.levelCurrent))
+            {
+                Plugin.Logger.LogInfo("[UER] Popup request skipped: current level is a menu or tutorial level.");
+                return;
+            }
 
             string _steamID = SteamClient.SteamId.Value.ToString();
             int upgradesDeserved = RunManager.instance.levelsCompleted * Plugin.UpgradesPerRound;
@@ -28,7 +37,12 @@ namespace UpgradeEveryRound
 #if DEBUG
             upgradesDeserved += 1;
 #endif
-            if (Plugin.NumUpgradesUsed(_steamID) >= upgradesDeserved) return;
+            int upgradesUsed = Plugin.NumUpgradesUsed(_steamID);
+            if (upgradesUsed >= upgradesDeserved)
+            {
+                Plugin.Logger.LogInfo($"[UER] Popup request skipped: usage={upgradesUsed}, deserved={upgradesDeserved}.");
+                return;
+            }
             //if (GameManager.Multiplayer() && !___photonView.IsMine) return;
 
             MenuManager.instance.PageCloseAll(); //Just in case somehow other menus were opened previously.
@@ -37,6 +51,7 @@ namespace UpgradeEveryRound
 
             isOpen = true;
             repoPopupPage.OpenPage(false);
+            Plugin.Logger.LogInfo($"[UER] Upgrade popup opened; usage={upgradesUsed}, deserved={upgradesDeserved}.");
         }
 
         public static REPOPopupPage createMenu(string _steamID)

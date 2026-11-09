@@ -21,7 +21,7 @@ namespace UpgradeEveryRound;
 
 [BepInPlugin(modGUID, modName, modVersion)]
 //HARD Dependencies. We need these to function.
-[BepInDependency("nickklmao.menulib", "2.6.0")]
+[BepInDependency("nickklmao.menulib", "2.6.2")]
 [BepInDependency("REPOLib", "4.3.0")]
 //These are just mods that add extra upgrades that we use dependencies to make sure we load AFTER
 [BepInDependency("bulletbot.moreupgrades", BepInDependency.DependencyFlags.SoftDependency)]
@@ -30,7 +30,7 @@ public class Plugin : BaseUnityPlugin
 {
     public const string modGUID = "dev.redfops.repo.upgradeeveryround"; //keeping original guid
     public const string modName = "Upgrade Every Round Updated";
-    public const string modVersion = "3.0.4";
+    public const string modVersion = "3.0.5";
 
     public static ConfigEntry<int> upgradesPerRound;
     public static ConfigEntry<bool> limitedChoices;
@@ -121,6 +121,7 @@ public class Plugin : BaseUnityPlugin
         gameObject.AddComponent<UpgradeEveryRoundPhotonCallbacks>();
 
         harmony.PatchAll(typeof(SceneSwitchPatch));
+        harmony.PatchAll(typeof(InputManagerSwitchToPlayerInputsPatch));
         harmony.PatchAll(typeof(LevelGeneratorGenerateDoneApplyPatch));
         harmony.PatchAll(typeof(RunManagerMainMenuPatch));
         harmony.PatchAll(typeof(StatsManagerStartPatch));
@@ -145,11 +146,18 @@ public class Plugin : BaseUnityPlugin
         SendConfig();
     }
 
-    public static void SendConfig()
+    public static void SendConfig(int? targetActorNumber = null)
     {
         if (!PhotonNetwork.InRoom || !PhotonNetwork.IsMasterClient) return;
         localNetworkData ??= new();
-        ConfigUpdateEvent.RaiseEvent(localNetworkData, ConfigUpdateEventOptions, SendOptions.SendReliable);
+        RaiseEventOptions eventOptions = targetActorNumber.HasValue
+            ? new RaiseEventOptions { TargetActors = new[] { targetActorNumber.Value } }
+            : ConfigUpdateEventOptions;
+        ConfigUpdateEvent.RaiseEvent(localNetworkData, eventOptions, SendOptions.SendReliable);
+        string destination = targetActorNumber.HasValue
+            ? $"actor {targetActorNumber.Value}"
+            : "room peers";
+        Logger.LogInfo($"[UER] Sent host upgrade configuration to {destination}.");
     }
 
     private static void HandleConfigUpdateEvent(EventData eventData)
@@ -167,6 +175,7 @@ public class Plugin : BaseUnityPlugin
         }
 
         remoteNetworkData = data;
+        Logger.LogInfo($"[UER] Received host upgrade configuration from actor {eventData.Sender}; upgradesPerRound={data.upgradesPerRound}.");
     }
 
     public static void DoUpgradeClient(string upgradeId, string _steamID)
@@ -293,6 +302,7 @@ internal sealed class UpgradeEveryRoundPhotonCallbacks : MonoBehaviourPunCallbac
     public override void OnJoinedRoom()
     {
         Plugin.remoteNetworkData = null;
+        Plugin.Logger.LogInfo($"[UER] Joined Photon room; master={PhotonNetwork.IsMasterClient}, waiting for host configuration={!PhotonNetwork.IsMasterClient}.");
         if (PhotonNetwork.IsMasterClient)
         {
             Plugin.SendConfig();
@@ -302,9 +312,18 @@ internal sealed class UpgradeEveryRoundPhotonCallbacks : MonoBehaviourPunCallbac
     public override void OnMasterClientSwitched(Player newMasterClient)
     {
         Plugin.remoteNetworkData = null;
+        Plugin.Logger.LogInfo($"[UER] Photon master changed; localIsMaster={PhotonNetwork.IsMasterClient}, newMasterActor={newMasterClient?.ActorNumber}.");
         if (PhotonNetwork.IsMasterClient)
         {
             Plugin.SendConfig();
         }
+    }
+
+    public override void OnPlayerEnteredRoom(Player newPlayer)
+    {
+        if (!PhotonNetwork.IsMasterClient) return;
+
+        Plugin.Logger.LogInfo($"[UER] Player actor {newPlayer.ActorNumber} joined; sending host upgrade configuration directly.");
+        Plugin.SendConfig(newPlayer.ActorNumber);
     }
 }

@@ -1,10 +1,10 @@
 {
     "name": "UpgradeEveryRoundUpdated",
-    "version_number": "3.0.4",
+    "version_number": "3.0.5",
     "website_url": "https://github.com/SolarAaron/UpgradeEveryRound",
     "description": "Simple mod which allows players to choose an upgrade for free upon loading into the shop.",
     "dependencies": [
-        "REPOModding-MenuLib-2.6.0",
+        "REPOModding-MenuLib-2.6.2",
         "BepInEx-BepInExPack-5.4.2305",
         "Zehs-REPOLib-4.3.0"
     ]
